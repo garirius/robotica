@@ -50,10 +50,21 @@ float leeIR(int sens){
 }
 
 PI_THREAD(distance){ //va midiendo distancias
+    int k=0;
+    float aux0, aux1;
     while(1){
-        dista[0] = leeIR(2);
-        dista[1] = leeIR(3);
-        delay(500);
+        aux0 = 0;
+        aux1 = 0;
+        
+        for(k=0; k<5; k++){
+            aux0 += leeIR(2);
+            delay(10);
+            aux1 += leeIR(3);
+            delay(50);
+        }
+        dista[0] = aux0/5;
+        dista[1] = aux1/5;
+        delay(100);
     }
 }
 

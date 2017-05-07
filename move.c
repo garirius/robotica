@@ -43,7 +43,7 @@ char sensen=0, girando=0;
 // girando nos dice si estamos yendo en línea recta (0) o girando hacia la derecha (-1) o hacia la izquierda (1)
 int di=0, dd=0, d=0, angulo=0;
 int dt, nt; //distancia target, ángulo target y cuentas target
-/*extern*/ int mypos[2], ori; //actuales posición y orientación
+extern int mypos[2], ori; //actuales posición y orientación
 
 
 

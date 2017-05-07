@@ -8,6 +8,7 @@
 #define INIVAL 0 // Valor inicial del PWM
 #define RANGO 100 // Rango del PWM
 extern float dista[2];
+int mypos[2], ori;
 
 int main(){
     char who; //0 sensor izq triggered y 1 sensor dcho triggered
@@ -32,17 +33,20 @@ int main(){
     printf("¡Voy a girar...!\n");
     gira(-90);
     printf("¡Ya he girao!\n");*/
-	/*gofw(1);
+    
+    //Hacer toda la maniobra de detectar obstáculos
+	gofw(1);
 	while(dista[0] == -1 && dista[1] == -1){}
 	stop(); //para al detectar algo
     delay(10);
     if(dista[0] == -1 && dista[1] != -1){
         who = 1;
-    } else if(dista[0] != -1 && dista[1] == -1){
+    } else {
         who = 0;
     }
     gofw(1);
     while(dista[who] > 20){}
+    stop();
 	delay(100);
 	gira(90);
     delay(100);
@@ -50,6 +54,6 @@ int main(){
     delay(100);
     gira(-90);
     delay(100);
-    advance(50);*/
+    advance(50);
     return 0;
 }
