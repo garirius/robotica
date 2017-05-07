@@ -43,7 +43,7 @@ char sensen=0, girando=0;
 // girando nos dice si estamos yendo en línea recta (0) o girando hacia la derecha (-1) o hacia la izquierda (1)
 int di=0, dd=0, d=0, angulo=0;
 int dt, nt; //distancia target, ángulo target y cuentas target
-extern int mypos[2], int ori; //actuales posición y orientación
+/*extern*/ int mypos[2], ori; //actuales posición y orientación
 
 
 
@@ -99,6 +99,7 @@ void advance(int cm){
     
     dt = cm;
     while(sensen){}
+	
     stop();
 }
 
@@ -108,8 +109,8 @@ void gira(int angle){
     int mchl, mchr;
     startCounting();
     
-    nt = 90*angle*INTER*FRANJAS/(PERI*PI); //calculamos cuántas franjas nos hace falta girar
-    
+    nt = abs(PI*angle*INTER*FRANJAS/(360*PERI)); //calculamos cuántas franjas nos hace falta girar
+    printf("Quiero girar %dº y para ello necesito %d vueltas\n",angle,nt);
     //En función de la dirección, asignamos una marcha a cada motor.
     if(angle > 0){
         mchl = BKL;
@@ -135,7 +136,7 @@ void gira(int angle){
 PI_THREAD(stable){
     int leci, lecd, frm;
     while(1){
-        delay(10);
+        delay(25);
         if(sensen){
             leci = leeSens(0);
             lecd = leeSens(1);
@@ -149,24 +150,23 @@ PI_THREAD(stable){
                 frd++;
             }
             
-            if((fri%FRANJAS/2 == 0) || (frd%FRANJAS/2==0)){ //cada media vuelta, mide distancias
+            if((fri%(FRANJAS/4) == 0) || (frd%(FRANJAS/4)==0)){ //cada media vuelta, mide distancias
                 switch(girando){
                     case 0: //si estamos yendo en línea recta
                         //cálculo de las distancias recorridas
                         di = PERI*fri/FRANJAS;
                         dd = PERI*frd/FRANJAS;
                         d = (di+dd)/2;
-                        
                         if((d >= dt)&&(dt>=0)){
                             sensen = 0;
                             angulo = 180*(dd-di)/(PI*INTER); //medimos el ángulo girado
                             ori += angulo;
-                            mypos[0] += Math.cos(PI*ori/180); //actualizamos posición x
-                            mypos[1] += Math.sin(PI*ori/180); //actualizamos posición y
+                            mypos[0] += cos(PI*ori/180); //actualizamos posición x
+                            mypos[1] += sin(PI*ori/180); //actualizamos posición y
                         }
                         break;
                     case 1: //si está girando
-                    case -1:
+                    case (char)-1:
                         if(fri > frd){ //miramos cuál es el máximo
                             frm = fri;
                         } else {

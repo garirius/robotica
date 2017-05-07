@@ -1,14 +1,8 @@
-#include <stdio.h>
-#include <wiringPi.h>
-#include <softPwm.h>
-#include "sense.h"
-#include <pthread.h>
-#include <stdlib.h>
-
 /* Definimos todas las especificaciones del robot */
 #define PINR 0 // Pin para la rueda derecha
 #define PINL 1 // Pin para la rueda izquierda
-#define PERIIZQ 0.22 //Perímetro (en m) de las ruedas.
+#define PERI 22 //Perímetro (en cm) de las ruedas.
+#define INTER 20.8 //Distancia (en cm) entre las ruedas
 
 //Qué valores pasar al PWM y demás cosis.
 #define FWL 20
@@ -30,8 +24,12 @@
 #define PIVL 7.52
 #define PIVR 7.2
 
+//Definimos pi porque por algún motivo math.h no lo tiene
+#define PI 3.141592
+
 void startCounting();
 void stop();
+void palante(int dir);
 void gofw(int dir);
 void advance(int cm);
 void gira(int angle);

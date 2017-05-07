@@ -1,2 +1,0 @@
-# robotica
-Stop it, Ron

@@ -12,13 +12,12 @@ static float volt[LUT_SIZE] = {3.0348, 2.7261, 2.3478, 2.0347, 1.7826, 1.5869, 1
 float dista[2];
 //lee el sens-ésimo sensor del encoder (0 ó 1)
 short leeSens(int sens){
-    /*int x = analogRead(100+sens);
+    int x = analogRead(100+sens);
     if(x>UMBRAL){ //devolvemos blanco (1) o negro (0) en función de la lectura del sensor
         return 1;
     } else {
         return 0;
-    }*/
-    return analogRead(100+sens);
+    }
 }
 
 //lee el sens-ésimo sensor del encoder (2 ó 3)

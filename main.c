@@ -13,7 +13,7 @@ int main(){
     char who; //0 sensor izq triggered y 1 sensor dcho triggered
 	wiringPiSetup(); /* Inicializamos WiringPi */
 	mcp3004Setup(100,0); //Inicializamos las cosillas del ADC
-    //motoresSetup();
+    motoresSetup();
     sensoresSetup();
     
 	/* Ya procedemos a crear los PWM */
@@ -25,9 +25,13 @@ int main(){
 	printf("Pulsa ENTER para ser guay.\n");
 	getchar();
     
-    advance(200);
-    delay(25);
+    //Avanzar 2m y girar 90 cm
+    /*advance(50);
+    printf("¡Aparcao!\n");
+    delay(250);
+    printf("¡Voy a girar...!\n");
     gira(-90);
+    printf("¡Ya he girao!\n");*/
 	/*gofw(1);
 	while(dista[0] == -1 && dista[1] == -1){}
 	stop(); //para al detectar algo
@@ -47,4 +51,5 @@ int main(){
     gira(-90);
     delay(100);
     advance(50);*/
+    return 0;
 }
