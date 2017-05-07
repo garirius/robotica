@@ -81,30 +81,28 @@ void advance(int cm){
     stop();
 }
 
-//Se pone a girar en una dirección (0 IZQ ó 1 DCH)
-void turn(int tow){
+//angle < 0 -> gira a la izquierda
+//angle > 0 -> gira a la derecha
+void gira(int angle){
     int mchl, mchr;
     startCounting();
     //En función de la dirección, asignamos una marcha a cada motor.
-    switch(tow){
-        case 0:
-            mchl = BKL;
-            mchr = FWR;
-            break;
-        case 1:
-            mchl = FWL;
-            mchr = BKR;
-            break;
-        default:
-            mchl = 0;
-            mchr = 0;
+    if(angle > 0){
+        mchl = BKL;
+        mchr = FWR;
+    } else if(angle < 0){
+        mchl = FWL;
+        mchr = BKR;
+    } else {
+        mchl = 0;
+        mchr = 0;
     }
     
+    short int time = 1000*angle/(SPIN*360);
     softPwmWrite(PINL,mchl);
     softPwmWrite(PINR,mchr);
-    delay(250/SPIN);
+    delay(time);
     stop();
-    
 }
 
 PI_THREAD(stable){

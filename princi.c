@@ -37,11 +37,11 @@ int main(){
     gofw(1);
     while(dista[who] > 20){}
 	delay(100);
-	turn(0);
+	gira(-90);
     delay(100);
     advance(40);
     delay(100);
-    turn(1);
+    gira(90);
     delay(100);
     advance(50);
 }

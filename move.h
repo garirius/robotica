@@ -1,3 +1,10 @@
+#include <stdio.h>
+#include <wiringPi.h>
+#include <softPwm.h>
+#include "sense.h"
+#include <pthread.h>
+#include <stdlib.h>
+
 /* Definimos todas las especificaciones del robot */
 #define PINR 0 // Pin para la rueda derecha
 #define PINL 1 // Pin para la rueda izquierda
@@ -24,14 +31,9 @@
 #define PIVR 7.2
 
 void startCounting();
-/* A continuación se escribe la función principal */
-//Va hacia delante.
-void gofw(int cm);
-//Para.
 void stop();
-//Se pone a girar en una dirección (IZQ ó DCH)
-void turn(int tow);
-//Pivota un cierto ángulo
-void pivot(float ang);
+void gofw(int dir);
+void advance(int cm);
+void gira(int angle);
 PI_THREAD(stable);
 void motoresSetup();
