@@ -4,6 +4,7 @@
 #include "move.h"
 #include <mcp3004.h>
 #include "sense.h"
+#include "plan.h"
 
 #define INIVAL 0 // Valor inicial del PWM
 #define RANGO 100 // Rango del PWM
@@ -23,8 +24,8 @@ int main(){
 	int izq=0, dch=0; /* Marchas PWM */
 	stop();
     
-	printf("Pulsa ENTER para ser guay.\n");
-	getchar();
+	/*printf("Pulsa ENTER para ser guay.\n");
+	getchar();*/
     
     //Avanzar 2m y girar 90 cm
     /*advance(50);
@@ -35,7 +36,7 @@ int main(){
     printf("¡Ya he girao!\n");*/
     
     //Hacer toda la maniobra de detectar obstáculos
-	gofw(1);
+	/*gofw(1);
 	while(dista[0] == -1 && dista[1] == -1){}
 	stop(); //para al detectar algo
     delay(10);
@@ -54,6 +55,18 @@ int main(){
     delay(100);
     gira(-90);
     delay(100);
-    advance(50);
+    advance(50);*/
+    
+    int post[2], orit;
+    
+    printf("Dime la coordenada x y ori inicial:\n");
+    scanf("%d %d %d", &mypos[0], &mypos[1], &ori);
+    
+    while(1){
+        printf("Dime la coordenada x y ori adonde quieres ir ahora:\n");
+        scanf("%d %d %d", &post[0], &post[1], &orit);
+        
+        goto(post,orit);
+    }
     return 0;
 }

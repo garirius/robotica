@@ -1,0 +1,1 @@
+void goto(int* post[2],int orit);
