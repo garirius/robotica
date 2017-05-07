@@ -25,7 +25,10 @@ int main(){
 	printf("Pulsa ENTER para ser guay.\n");
 	getchar();
     
-	gofw(1);
+    advance(200);
+    delay(25);
+    gira(-90);
+	/*gofw(1);
 	while(dista[0] == -1 && dista[1] == -1){}
 	stop(); //para al detectar algo
     delay(10);
@@ -37,11 +40,11 @@ int main(){
     gofw(1);
     while(dista[who] > 20){}
 	delay(100);
-	gira(-90);
+	gira(90);
     delay(100);
     advance(40);
     delay(100);
-    gira(90);
+    gira(-90);
     delay(100);
-    advance(50);
+    advance(50);*/
 }

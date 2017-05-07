@@ -3,7 +3,7 @@
 
 #define SPIOUT 13
 #define UMBRAL 620
-#define FRANJAS 48
+#define FRANJAS 16
 #define LUT_SIZE 17
 
 static unsigned char dist[LUT_SIZE] = {3, 4, 5, 6, 7, 8, 9, 10, 12, 14, 16, 18, 20, 25, 30, 35, 40};
