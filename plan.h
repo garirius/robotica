@@ -1,1 +1,1 @@
-void goto(int* post[2],int orit);
+void ira(int* post,int orit);

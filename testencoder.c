@@ -48,4 +48,5 @@ int main(){
     for(i=0; i< 300; i++){
 		fprintf(f,"%d %d\n",left[i],right[i]);
 	}
+	fclose(f);
 }
