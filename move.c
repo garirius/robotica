@@ -112,12 +112,12 @@ void gira(int angle){
     //printf("Quiero girar %dº y para ello necesito %d cuentas\n",angle,nt);
     //En función de la dirección, asignamos una marcha a cada motor.
     if(angle > 0){
-        mchl = 0;
+        mchl = BKL;
         mchr = FWR;
         girando = 1;
     } else if(angle < 0){
         mchl = FWL;
-        mchr = 0;
+        mchr = BKR;
         girando = -1;
     } else {
         mchl = 0;
@@ -176,8 +176,8 @@ PI_THREAD(stable){
                             sensen = 0;
                             aux = girando*180*PERI*frm/(PI*INTER*FRANJAS);
                             ori = (aux+ori)%360;
-                            mypos[0] = INTER*(1-cos(aux*180/PI))/2;
-                            mypos[1] = INTER*sin(aux*180/PI)/2;
+//                          mypos[0] += INTER*(1-cos(aux*180/PI))/2;
+//                          mypos[1] += INTER*sin(aux*180/PI)/2;
 
                         }
                         break;

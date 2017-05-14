@@ -43,7 +43,7 @@ float leeIR(int sens){
         d1 = (float)dist[pos-1];
         d2 = (float)dist[pos];
 
-        d = d1 + (v-vol1)*(vol2-vol1)/(d2-d1);
+        d = d1 + (v-vol1)*(d2-d1)/(vol2-vol1);
     }
         
     return d;

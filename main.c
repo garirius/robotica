@@ -22,7 +22,6 @@ int main(){
 	softPwmCreate(PINR, INIVAL, RANGO);
 	softPwmCreate(PINL, INIVAL, RANGO);
 	int izq=0, dch=0; /* Marchas PWM */
-	stop();
     
 	//printf("Pulsa ENTER para ser guay.\n");
 	///getchar();
