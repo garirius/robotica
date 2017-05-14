@@ -33,5 +33,4 @@ void palante(int dir);
 void gofw(int dir);
 void advance(int cm);
 void gira(int angle);
-PI_THREAD(stable);
 void motoresSetup();

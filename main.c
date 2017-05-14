@@ -56,7 +56,7 @@ int main(){
     delay(100);
     advance(50);*/
     
-    int post[2], orit;
+    int post[2], orit, corigo=0;
     
     printf("Dime la coordenada x y ori inicial:\n");
     scanf("%d %d %d", &mypos[0], &mypos[1], &ori);
@@ -66,7 +66,15 @@ int main(){
         printf("Dime la coordenada x y ori adonde quieres ir ahora:\n");
         scanf("%d %d %d", &post[0], &post[1], &orit);
         
-        ira(post,orit);        
+        while(!corigo){
+            ira(post,orit);
+            corigo = thereYet(post,orit);
+            if(!corigo){
+                printf("\n ATENÇAO: CORRIGIENDO... \n");
+            }
+        }
+        
+        corigo = 0;    
     }
     
     //advance(100);

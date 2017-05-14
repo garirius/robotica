@@ -86,9 +86,7 @@ void gofw(int dir){
 }
 
 //Va hacia delante cm cm.
-void advance(int cm){
-    startCounting();
-    
+void advance(int cm){    
     if(cm > 0){
         palante(1);
     } else {
@@ -108,7 +106,7 @@ void gira(int angle){
     int mchl, mchr;
     startCounting();
     
-    nt = abs(PI*angle*INTER*FRANJAS/(180*PERI)); //calculamos cuántas franjas nos hace falta girar
+    nt = abs(PI*angle*INTER*FRANJAS/(360*PERI)); //calculamos cuántas franjas nos hace falta girar
     //printf("Quiero girar %dº y para ello necesito %d cuentas\n",angle,nt);
     //En función de la dirección, asignamos una marcha a cada motor.
     if(angle > 0){
@@ -150,7 +148,7 @@ PI_THREAD(stable){
                 frd++;
             }
             
-            if((fri%(FRANJAS/4) == 0) || (frd%(FRANJAS/4)==0)){ //cada media vuelta, mide distancias
+            if((fri%(FRANJAS/8) == 0) || (frd%(FRANJAS/8)==0)){ //cada media vuelta, mide distancias
                 switch(girando){
                     case 0: //si estamos yendo en línea recta
                         //cálculo de las distancias recorridas
@@ -160,9 +158,11 @@ PI_THREAD(stable){
                         if((d >= dt)&&(dt>=0)){
                             sensen = 0;
                             angulo = 180*(dd-di)/(PI*INTER); //medimos el ángulo girado
+                            aux = ori + angulo/2;
+                            mypos[0] += d*cos(PI*aux/180); //actualizamos posición x
+                            mypos[1] += d*sin(PI*aux/180); //actualizamos posición y
                             ori = (ori+angulo)%360;
-                            mypos[0] += d*cos(PI*ori/180); //actualizamos posición x
-                            mypos[1] += d*sin(PI*ori/180); //actualizamos posición y
+                            printf("\n    IZQ. %d cuentas | DCH. %d cuentas \n",fri,frd);
                         }
                         break;
                     case 1: //si está girando
@@ -174,8 +174,10 @@ PI_THREAD(stable){
                         }
                         if(frm > nt){
                             sensen = 0;
-                            aux = girando*180*PERI*frm/(PI*INTER*FRANJAS);
+                            aux = girando*360*PERI*frm/(PI*INTER*FRANJAS);
+                            printf("Yo estaba en %d y he girado %dº",ori,aux);
                             ori = (aux+ori)%360;
+                            printf(", con lo que ahora estoy en %dº\n",ori);
 //                          mypos[0] += INTER*(1-cos(aux*180/PI))/2;
 //                          mypos[1] += INTER*sin(aux*180/PI)/2;
 
