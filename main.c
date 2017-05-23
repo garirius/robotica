@@ -3,6 +3,7 @@
 #include <softPwm.h>
 #include "move.h"
 #include <mcp3004.h>
+#include <stdlib.h>
 #include "sense.h"
 #include "plan.h"
 
@@ -56,26 +57,25 @@ int main(){
     delay(100);
     advance(50);*/
     
-    int post[2], orit, corigo=0;
+    int i,len,orit;
+    int** path;
     
     printf("Dime la coordenada x y ori inicial:\n");
     scanf("%d %d %d", &mypos[0], &mypos[1], &ori);
     printf("Vale, parto en (%d, %d) con orientación %dº.\n",mypos[0],mypos[1],ori);
     
-    while(1){
-        printf("Dime la coordenada x y ori adonde quieres ir ahora:\n");
-        scanf("%d %d %d", &post[0], &post[1], &orit);
-        
-        while(!corigo){
-            ira(post,orit);
-            corigo = thereYet(post,orit);
-            if(!corigo){
-                printf("\n ATENÇAO: CORRIGIENDO... \n");
-            }
-        }
-        
-        corigo = 0;    
+    printf("\n Dime por cuántos puntos quieres que pase:\n");
+    scanf("%d", &len);
+    
+    path = malloc(len*sizeof(int*));
+    printf("Ve especificándome uno por uno los puntos por los que quieres que pase.\n");
+    for(i=0; i<len; i++){
+        path[i] = malloc(2*sizeof(int));
+        scanf("%d %d",&path[i][0],&path[i][1]);
     }
+    
+    follow(path,len);
+    
     
     //advance(100);
     //delay(1000);

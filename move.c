@@ -39,12 +39,14 @@
 int fri=0, frd=0; //franjas recorridas
 char sti, std; //franja actual (0 = negro, 1 = blanco)
 char sensen=0;
-int girando=0;
+int girando=0, esquivando=0;
 // sensen nos dice si los motores están en marcha
 // girando nos dice si estamos yendo en línea recta (0) o girando hacia la derecha (-1) o hacia la izquierda (1)
+// esquivando nos dice (sopresa sorpresa) si estamos esquivando un obstáculo
 int di=0, dd=0, d=0, angulo=0;
 int dt, nt; //distancia target, ángulo target y cuentas target
 extern int mypos[2], ori; //actuales posición y orientación
+extern float dista[2]; //distancias detectadas por los sensores
 
 void startCounting(){
     sensen = 1;
@@ -130,9 +132,56 @@ void gira(int angle){
     stop();
 }
 
+//Ejecuta una maniobra para esquivar obstáculos
+void esquiva(){
+    int sgn, i;
+    float howfar = 0;
+    int cuantos=0;
+    int acerca;
+    delay(1000);
+    
+    //calculamos a qué distancia nos encontramos del obstáculo
+    if(dista[0]>-1){
+		cuantos++;
+		howfar += dista[0];
+	}
+    if(dista[1]>-1){
+		cuantos++;
+		howfar += dista[1];
+	}
+	
+	howfar = howfar/(0.0+cuantos);
+	printf("\nEstoy a %.2f cm del obstáculo.\n",howfar);
+	acerca = howfar-20;
+	printf("\nQuiero avanzar %d cm pa ser guay.\n",acerca);
+    //...y simplemente nos vamos hasta estar a 20 cm de él.
+    advance(acerca);
+    delay(1000);
+    
+    //determinamos hacia qué dirección girar, en caso de no estar mirando el obstáculo de forma completamente perpendicular
+    if((dista[0]<20)||(dista[1]<20)){
+        if(dista[1] > 20){
+            sgn = -1;
+        } else {
+            sgn = 1;
+        }
+    }
+    
+    //hacemos todas las maniobras pertinentes
+    gira(sgn*90);
+    delay(100);
+    advance(40);
+    delay(100);
+    gira(-sgn*90);
+    delay(100);
+    advance(50);
+    esquivando = 0;
+    printf("Ya está esquivado\n");
+}
+
 //CONTADOR DE FRANJAS Y TAL
 PI_THREAD(stable){
-    int leci, lecd, frm, aux;
+    int leci, lecd, frm, aux, obstaculo;
     while(1){
         delay(10);
         if(sensen){
@@ -155,14 +204,31 @@ PI_THREAD(stable){
                         di = PERI*fri/FRANJAS;
                         dd = PERI*frd/FRANJAS;
                         d = (di+dd)/2;
-                        if((d >= dt)&&(dt>=0)){
+                        
+                        if((dista[0]>-1)||(dista[1]>-1)){
+                            //si detecta algún obstáculo, nos metemos en harina
+                            if((esquivando==1) && ((dista[0]>20)||(dista[1]>20))){
+                                obstaculo = 0;
+                            } else {
+                                //obstaculo = 1;
+                                printf("\n\n      ¡TENEMOS UN GANADOR!\n\n");
+                            }
+                        } else {
+                            obstaculo = 0;
+                        }
+                        
+                        if(((d >= dt)&&(dt>=0))||(obstaculo==1)){
                             sensen = 0;
                             angulo = 180*(dd-di)/(PI*INTER); //medimos el ángulo girado
                             aux = ori + angulo/2;
                             mypos[0] += d*cos(PI*aux/180); //actualizamos posición x
                             mypos[1] += d*sin(PI*aux/180); //actualizamos posición y
                             ori = (ori+angulo)%360;
-                            printf("\n    IZQ. %d cuentas | DCH. %d cuentas \n",fri,frd);
+                            printf("Ya paro, tranqui\n");
+                        }
+                        
+                        if((obstaculo)&&(!esquivando)){
+                            esquivando = 1;
                         }
                         break;
                     case 1: //si está girando
@@ -191,8 +257,19 @@ PI_THREAD(stable){
     }
 }
 
+//hilo para esquivar
+PI_THREAD(dodge){
+	while(1){
+		if(esquivando){
+			printf("Esquivando...\n");
+			esquiva();
+		}
+	}
+}
+
 void motoresSetup(){
     sti = leeSens(0);
     std = leeSens(1);
     int x = piThreadCreate(stable);
+    int y = piThreadCreate(dodge);
 }

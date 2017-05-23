@@ -33,4 +33,5 @@ void palante(int dir);
 void gofw(int dir);
 void advance(int cm);
 void gira(int angle);
+void esquiva();
 void motoresSetup();
