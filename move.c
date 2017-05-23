@@ -58,6 +58,7 @@ void startCounting(){
     dd = 0;
     d = 0;
     angulo = 0;
+    delay(200);
 }
 
 //Para.

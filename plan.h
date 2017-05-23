@@ -1,11 +1,12 @@
 #define TOOFAR 10
-//Nuestras variables globales de posición y orientación
-extern int mypos[2], ori;
+#define TORCIDO 10
+
+//Comprueba si hemos llegado a nuestro destino.
+int thereYetAng(int* post,int orit);
+void iraAng(int* post,int orit);
 
 //Comprueba si hemos llegado a nuestro destino.
 int thereYet(int* post);
-
-//Va al punto que le decimos
 void ira(int* post);
 
 //Sigue un camino definido por path
