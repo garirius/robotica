@@ -10,15 +10,13 @@
 #define INIVAL 0 // Valor inicial del PWM
 #define RANGO 100 // Rango del PWM
 extern float dista[2];
-int mypos[2], ori;
+float mypos[2], ori;
 
 int main(){
     char who; //0 sensor izq triggered y 1 sensor dcho triggered
 	wiringPiSetup(); /* Inicializamos WiringPi */
 	mcp3004Setup(100,0); //Inicializamos las cosillas del ADC
-    motoresSetup();
-    sensoresSetup();
-    
+        
 	/* Ya procedemos a crear los PWM */
 	softPwmCreate(PINR, INIVAL, RANGO);
 	softPwmCreate(PINL, INIVAL, RANGO);
@@ -57,12 +55,15 @@ int main(){
     delay(100);
     advance(50);*/
     
-    int i,len,orit;
+    int i,len,orit, aux1, aux2, aux3;
     int** path;
     
     printf("Dime la coordenada x y ori inicial:\n");
-    scanf("%d %d %d", &mypos[0], &mypos[1], &ori);
-    printf("Vale, parto en (%d, %d) con orientación %dº.\n",mypos[0],mypos[1],ori);
+    scanf("%d %d %d", &aux1, &aux2, &aux3);
+    mypos[0] = aux1;
+    mypos[1] = aux2;
+    ori = aux3;
+    printf("Vale, parto en (%.0f, %.0f) con orientación %.0fº.\n",mypos[0],mypos[1],ori);
     
     printf("\n Dime por cuántos puntos quieres que pase:\n");
     scanf("%d", &len);
@@ -73,10 +74,10 @@ int main(){
         path[i] = malloc(2*sizeof(int));
         scanf("%d %d",&path[i][0],&path[i][1]);
     }
-    
+    motoresSetup();
+    sensoresSetup();
     follow(path,len);
-    
-    
+        
     //advance(100);
     //delay(1000);
     return 0;

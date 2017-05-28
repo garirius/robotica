@@ -35,3 +35,4 @@ void advance(int cm);
 void gira(int angle);
 void esquiva();
 void motoresSetup();
+typedef enum {FRI=0, FRD, POSICION, NUM_CERROJOS} cerrojo;

@@ -35,45 +35,54 @@
 //Definimos pi porque por algún motivo math.h no lo tiene
 #define PI 3.141592
 
+//Definimos nombres varios para los cerrojos
+typedef enum {FRI=0, FRD, POSICION, NUM_CERROJOS} cerrojo;
+
 //Variables globales para los hilos
 int fri=0, frd=0; //franjas recorridas
 char sti, std; //franja actual (0 = negro, 1 = blanco)
-char sensen=0;
-int girando=0, esquivando=0;
+int girando=1, esquivando=0;
 // sensen nos dice si los motores están en marcha
 // girando nos dice si estamos yendo en línea recta (0) o girando hacia la derecha (-1) o hacia la izquierda (1)
 // esquivando nos dice (sopresa sorpresa) si estamos esquivando un obstáculo
-int di=0, dd=0, d=0, angulo=0;
-int dt, nt; //distancia target, ángulo target y cuentas target
-extern int mypos[2], ori; //actuales posición y orientación
+int cuentas=0;
+float distot = 0;
+extern float mypos[2], ori; //actuales posición y orientación
 extern float dista[2]; //distancias detectadas por los sensores
 
 void startCounting(){
-    sensen = 1;
+	piLock(FRI);
+	piLock(FRD);
+	
     fri = 0;
     frd = 0;
     sti = leeSens(0);
     std = leeSens(1);
-    di = 0;
-    dd = 0;
-    d = 0;
-    angulo = 0;
+    cuentas = 0;
+    distot = 0;
     delay(200);
+    
+    piUnlock(FRI);
+	piUnlock(FRD);
 }
 
 //Para.
 void stop(){
     softPwmWrite(PINL,0);
     softPwmWrite(PINR,0);
-    sensen = 0;
+    piLock(POSICION);
+    cuentas = 0;
+    distot = 0;
+    piUnlock(POSICION);
 }
 
 /* A continuación se escribe la función principal */
 //Va hacia delante (1) o hacia atrás 0.
 void palante(int dir){
+	piLock(POSICION);
     girando = 0;
     startCounting();
-    
+    piUnlock(POSICION);
     if(dir == 1){
         softPwmWrite(PINL,FWL);
         softPwmWrite(PINR,FWR);
@@ -83,13 +92,10 @@ void palante(int dir){
     }
 }
 
-void gofw(int dir){
-    dt = -1;
-    palante(dir);
-}
 
 //Va hacia delante cm cm.
-void advance(int cm){    
+void advance(int cm){
+    int aux;
     if(cm > 0){
         palante(1);
     } else {
@@ -97,19 +103,25 @@ void advance(int cm){
         cm = -cm;
     }
     
-    dt = cm;
-    while(sensen){}
-	
+    do{
+        piLock(POSICION);
+        aux = distot;
+        piUnlock(POSICION);
+        delay(5);
+    }while((aux < cm)&&(cm >= 0));
     stop();
 }
 
 //angle < 0 -> gira a la izquierda
 //angle > 0 -> gira a la derecha
 void gira(int angle){
-    int mchl, mchr;
-    startCounting();
+    int mchl, mchr, nt, aux;
+    float auxn;
     
-    nt = abs(PI*angle*INTER*FRANJAS/(360*PERI)); //calculamos cuántas franjas nos hace falta girar
+    piLock(POSICION);
+    startCounting();
+    auxn = PI*angle*INTER*FRANJAS/(360.0*PERI);
+    nt = abs(nearbyintf(auxn)); //calculamos cuántas franjas nos hace falta girar
     //printf("Quiero girar %dº y para ello necesito %d cuentas\n",angle,nt);
     //En función de la dirección, asignamos una marcha a cada motor.
     if(angle > 0){
@@ -124,13 +136,21 @@ void gira(int angle){
         mchl = 0;
         mchr = 0;
         girando = 2;
-        sensen = 0;
     }
+    piUnlock(POSICION);
     
     softPwmWrite(PINL,mchl);
     softPwmWrite(PINR,mchr);
-    while(sensen){}
+    do{
+        piLock(POSICION);
+        aux = cuentas;
+        piUnlock(POSICION);
+        delay(5);
+    }while((aux < nt)&&(nt > 0));
     stop();
+    printf("   Cuentas requeridas: %f -> %d | Cuentas contadas: %d\n",auxn,nt,aux);
+    aux = angle*360*PERI*aux/(abs(angle)*PI*INTER*FRANJAS);
+    printf("He girado %dº\n",aux);
 }
 
 //Ejecuta una maniobra para esquivar obstáculos
@@ -180,81 +200,108 @@ void esquiva(){
     printf("Ya está esquivado\n");
 }
 
-//CONTADOR DE FRANJAS Y TAL
-PI_THREAD(stable){
-    int leci, lecd, frm, aux, obstaculo;
-    while(1){
-        delay(10);
-        if(sensen){
-            leci = leeSens(0);
-            lecd = leeSens(1);
-            
-            if(leci != sti){
-                sti = leci;
-                fri++;
-            }
-            if(lecd != std){
-                std = lecd;
-                frd++;
-            }
-            
-            if((fri%(FRANJAS/12) == 0) || (frd%(FRANJAS/12)==0)){ //cada media vuelta, mide distancias
-                switch(girando){
-                    case 0: //si estamos yendo en línea recta
-                        //cálculo de las distancias recorridas
-                        di = PERI*fri/FRANJAS;
-                        dd = PERI*frd/FRANJAS;
-                        d = (di+dd)/2;
-                        
-                        if((dista[0]>-1)||(dista[1]>-1)){
-                            //si detecta algún obstáculo, nos metemos en harina
-                            if((esquivando==1) && ((dista[0]>20)||(dista[1]>20))){
-                                obstaculo = 0;
-                            } else {
-                                //obstaculo = 1;
-                                //printf("\n\n      ¡TENEMOS UN GANADOR!\n\n");
-                            }
-                        } else {
-                            obstaculo = 0;
-                        }
-                        
-                        if(((d >= dt)&&(dt>=0))||(obstaculo==1)){
-                            sensen = 0;
-                            angulo = 180*(dd-di)/(PI*INTER); //medimos el ángulo girado
-                            aux = ori + angulo/2;
-                            mypos[0] += d*cos(PI*aux/180); //actualizamos posición x
-                            mypos[1] += d*sin(PI*aux/180); //actualizamos posición y
-                            ori = (ori+angulo)%360;
-                            printf("Ya paro, tranqui\n");
-                        }
-                        
-                        if((obstaculo)&&(!esquivando)){
-                            esquivando = 1;
-                        }
-                        break;
-                    case 1: //si está girando
-                    case -1:
-                        if(fri > frd){ //miramos cuál es el máximo
-                            frm = fri;
-                        } else {
-                            frm = frd;
-                        }
-                        if(frm > nt){
-                            sensen = 0;
-                            aux = girando*360*PERI*frm/(PI*INTER*FRANJAS);
-                            printf("Yo estaba en %d y he girado %dº",ori,aux);
-                            ori = (aux+ori)%360;
-                            printf(", con lo que ahora estoy en %dº\n",ori);
-//                          mypos[0] += INTER*(1-cos(aux*180/PI))/2;
-//                          mypos[1] += INTER*sin(aux*180/PI)/2;
+//Convierte nuestros ángulos en -180 a 180
+/* float rangulo(float angulo){
+	int sgn;
+	
+	while(fabs(angulo) > 180){
+		if(angulo > 0){
+			sgn = 1;
+		} else if(angulo < 0) {
+			sgn = -1;
+		}
+		
+		angulo = angulo - sgn * 360;
+		printf("Estoy aquí dentro messing with your shit\n");
+	}
+	return angulo;
+} */
 
-                        }
-                        break;
-                    default: //si algún imbécil viene a tocarnos las narices poniendo valores que no son
-                        printf("¿Qué quieres tú, matao?\n");
-                }
-            }
+/***************** POR AQUÍ EMPIEZAN LOS HILOS VARIOS ****************/
+
+//CONTADOR DE FRANJAS (for real)
+PI_THREAD(izq){
+	piHiPri(10);
+    while(1){
+        //echamos el cerrojo
+        piLock(FRI);
+        int leci = leeSens(0);
+        if(leci != sti){
+            sti = leci;
+            fri++;
         }
+        piUnlock(FRI);
+        delay(5);
+    }
+}
+
+PI_THREAD(dcha){
+	piHiPri(10);
+    while(1){
+        piLock(FRD);
+        int lecd = leeSens(1);
+        if(lecd != std){
+            std = lecd;
+            frd++;
+        }
+        piUnlock(FRD);
+        delay(5);
+    }   
+}
+
+//actualiza la posición
+PI_THREAD(posi){
+    int auxi, auxd, frm, aux;
+    int cuanto=0;
+    float di, dd, d, angulo, auxf;
+    while(1){
+        piLock(FRI);
+        piLock(FRD);
+        auxi = fri;
+        auxd = frd;
+        fri = 0;
+        frd = 0;
+        piUnlock(FRD);
+        piUnlock(FRI);
+        
+        //en función de si estamos girando y tal calculamos una cosa u otra
+        piLock(POSICION);
+        switch(girando){
+                case 0: //si estamos yendo en línea recta
+                    //cálculo de las distancias recorridas en cada mini-tramo
+                    di = PERI*auxi/FRANJAS;
+                    dd = PERI*auxd/FRANJAS;
+                    d = (di+dd)/2;
+					printf("%.2f cm más, o sea que he recorrido ",d);
+					
+                    angulo = 180*(dd-di)/(PI*INTER); //medimos el ángulo girado
+                    auxf = ori + angulo;
+                    mypos[0] += d*cos(PI*auxf/180); //actualizamos posición x
+                    mypos[1] += d*sin(PI*auxf/180); //actualizamos posición y
+                    ori = auxf;
+                
+                    //Vamos acumulando la distancia recorrida
+                    distot += d;
+                    printf("%.2f cm\n",distot);
+                    cuanto = 250;
+                    break;
+                case 1: //si está girando
+                case -1:
+                    if(auxi > auxd){ //miramos cuál es el máximo
+                        frm = auxi;
+                    } else {
+                        frm = auxd;
+                    }
+                
+                    auxf = girando*360*PERI*frm/(PI*INTER*FRANJAS);
+                    ori += auxf;
+                    
+                    cuentas += frm;
+                    cuanto = 50;
+                    break;
+        }
+        piUnlock(POSICION);
+        delay(cuanto);
     }
 }
 
@@ -271,6 +318,7 @@ PI_THREAD(dodge){
 void motoresSetup(){
     sti = leeSens(0);
     std = leeSens(1);
-    int x = piThreadCreate(stable);
-    //int y = piThreadCreate(dodge);
+    int x = piThreadCreate(izq);
+    int y = piThreadCreate(dcha);
+    int z = piThreadCreate(posi);
 }
