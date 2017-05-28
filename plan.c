@@ -6,7 +6,7 @@
 #define TOOFAR 10
 #define TORCIDO 10
 //Nuestras variables globales de posición y orientación
-extern int mypos[2], ori;
+extern int mypos[2], ori, esquivando;
 
 //Comprueba si hemos llegado a nuestro destino.
 int thereYetAng(int* post,int orit){

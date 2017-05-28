@@ -198,7 +198,7 @@ PI_THREAD(stable){
                 frd++;
             }
             
-            if((fri%(FRANJAS/8) == 0) || (frd%(FRANJAS/8)==0)){ //cada media vuelta, mide distancias
+            if((fri%(FRANJAS/12) == 0) || (frd%(FRANJAS/12)==0)){ //cada media vuelta, mide distancias
                 switch(girando){
                     case 0: //si estamos yendo en línea recta
                         //cálculo de las distancias recorridas
@@ -212,7 +212,7 @@ PI_THREAD(stable){
                                 obstaculo = 0;
                             } else {
                                 //obstaculo = 1;
-                                printf("\n\n      ¡TENEMOS UN GANADOR!\n\n");
+                                //printf("\n\n      ¡TENEMOS UN GANADOR!\n\n");
                             }
                         } else {
                             obstaculo = 0;
@@ -272,5 +272,5 @@ void motoresSetup(){
     sti = leeSens(0);
     std = leeSens(1);
     int x = piThreadCreate(stable);
-    int y = piThreadCreate(dodge);
+    //int y = piThreadCreate(dodge);
 }
