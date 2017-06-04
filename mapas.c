@@ -3,9 +3,20 @@
 #include <stdio.h>
 
 #define MARGEN 1.0 //1 celda - 10 cm
+
+//definimos el struct nodo de grafo
+typedef enum estado = {NOVISITADO=0, VISITADO, NUM_MODOS};
+struct Nodo {
+    estado state=NOVISITADO; //estado del nodo: visitado o novisitado
+    int pos[2]; //posición del mapa a la que corresponde el nodo
+    int num_vecinos=0; //número de vecinos que tiene el nodo
+    int* id_vecinos; //array con los ID (aka posiciones en el array) de los nodos vecinos
+    float* dist_vecinos; //array con las distancias a las que están los vecinos
+}
+
 int** map;
-int** muest;
-int** marge;
+Nodo* graph;
+int grtam;
 
 //Determina el tamaño del mapa.
 void getSize(char* name, int* tam1, int* tam2){
@@ -41,6 +52,117 @@ void getSize(char* name, int* tam1, int* tam2){
     *tam1 = s1-1;
     *tam2 = s2+1;
     fclose(fp);
+}
+
+/*** Dice si una posición x,y del mapa[tam1][tam2] vale para crear un nodo del grafo
+   * Devuelve 1 si sí, 0 si no.
+   * Para ser un nodo válido, la celda debe cumplir 3 condiciones:
+   * a) contener un valor numérico entre 0 y 9
+   * b) no contener un 1 ni un 2 (léase: obstáculos)
+   * c) no ser contigua a un 1 ni un 2 (por temas de maniobrabilidad, básicamente)
+   ***/
+int isValid(int x, int y, int tam1, int tam2){
+    int ele = map[x][y];
+    int cond1,cond2;
+    int res = 0; 
+    //recorremos el vecindario de (x,y) para ver si se cumplen las condiciones b y c
+    int n,m;
+    
+    for(n=-1; n<=1; n++){
+        for(m=-1; m<=1; m++){
+            //primero comprobamos que los índices no se salen del mapa
+            if(((x+n>tam1)&&(x+n<0))&&((y+m>tam2)&&(y+m<0))){
+                ele = map[x+n][y+m];
+                //Y entonces comprobamos que se cumplen las condiciones
+                cond1 = (ele >= 0) && (ele <= 9); //condición a
+                cond2 = (ele != 1) && (ele != 2); //condición b
+                if(cond1 && cond2){
+                    res = 1;
+                }
+            }
+        }
+    }
+    
+    return res;
+}
+
+//Devuelve el índice del nodo correspondiente a la celda (x,y) del mapa
+//En caso de no existir en el grafo, devuelve -1
+int inGraph(int x, int y){
+    int n;
+    for(n=0; n<grtam; n++){
+        if((graph[n].pos[0]==x)&&(graph[n].pos[1]==y)){
+            return n;
+        }
+    }
+    
+    return -1;
+}
+
+//Devuelve la distancia entre dos nodos de un grafo.
+float distGraph(int pos1, int pos2){
+    int x1 = graph[pos1].pos[0];
+    int y1 = graph[pos1].pos[1];
+    int x2 = graph[pos2].pos[0];
+    int y2 = graph[pos2].pos[1];
+    
+    return sqrt((x1-x2)*(x1-x2)+(y1-y2)*(y1-y2));
+}
+//Inicializa el grafo con el mapa que tenemos.
+void initGraph(int tam1, int tam2){
+    int n,m, id, tot, tot2, aux, cnt;
+    id = 0;
+    //contaremos sólo como nodos válidos aquellos que NO tengan ni sean contiguos a un 1 ó un 2
+    for(n=0; n<tam1;n++){
+        for(m=0; m<tam2; m++){
+            if(isValid(n,m,tam1,tam2)){
+                tot++;
+            }
+        }
+    }
+    
+    //Reservamos la memoria que haga falta
+    graph = (Nodo*)malloc(tot*sizeof(Nodo));
+    grtam = tot;
+    
+    //Recorremos nuevamente el mapa, esta vez inicializando ya nodos.
+    for(n=0; n<tam1;n++){
+        for(m=0; m<tam2; m++){
+            if(isValid(n,m,tam1,tam2)){
+                graph[id].pos[0]=n;
+                graph[id].pos[0]=m;
+                //Y contamos cuántos vecinos posibles tiene la celda
+                for(tot=-1; tot<=1; tot++){
+                    for(tot2=-1; tot2<=1; tot2++){
+                        if(isValid(n+tot,m+tot2,tam1,tam2)){
+                            graph[id].num_vecinos++;
+                        }
+                    }
+                }
+                //Tras saberlo, reservamos la memoria necesaria.
+                graph[id].id_vecinos = (int*)malloc(num_vecinos*sizeof(int));
+                graph[id].dist_vecinos = (float*)malloc(num_vecinos*sizeof(int));
+                id++;
+            }
+        }
+    }
+    
+    //Finalmente, establecemos las conexiones de los nodos con sus vecinos.
+    for(id=0; id<grtam; id++){
+        n = graph[id].pos[0];
+        m = graph[id].pos[1];
+        cnt = 0;
+        for(tot=-1; tot<=1; tot++){
+            for(tot2=-1; tot2<=1; tot2++){
+                aux = inGraph(n+tot,m+tot2);
+                if(aux >= 0){ //si la celda contigua corresponde a un nodo del grafo, lo apuntamos.
+                    graph[id].id_vecinos[cnt]=aux;
+                    graph[id].dist_vecinos[cnt]=distGraph(aux,id);
+                    cnt++;
+                }
+            }
+        }
+    }
 }
 
 //Lee un archivo y saca un mapa, así como su tamaño
@@ -100,201 +222,6 @@ void showMap(int tam1, int tam2){
 		printf("\n");
 	}
 }
-
-/*** Saca qué puntos tiene que comprobar entre los puntos 1 y 2 
- * punto1 y punto2 son las entradas de la función
- * muest y marge son los arrays de puntos que hay que mirar
- * muest[len] son los puntos por los que pasa la recta
- * marge[len2] son los puntos que damos de pseudomargen para completar ***/
-void whichPoints(int punto1[2], int punto2[2], int* len, int* len2){
-	int deltax = punto2[0]-punto1[0];
-	int deltay = punto2[1]-punto1[1];
-	float m = deltay/(deltax+0.0);
-	float n = punto1[1]-m*punto1[0];
-	float res;
-	int tam,i,sgn,aux,tam2;
-	free(muest);
-	free(marge);
-	printf("Pasito \n");
-	//miramos si muestrear en x ó en y
-	if(abs(deltax) > abs(deltay)){
-		//hay más variación en x
-		tam = abs(deltax)+1;
-		muest = (int**)malloc(tam*sizeof(int*));
-		printf("a pasito\n");
-		if(deltax > 0){
-			sgn = 1;
-		} else {
-			sgn = -1;
-		}
-		
-		//Mirar por qué puntos pasa la recta.
-		for(i=0;i<tam;i++){
-			muest[i] = (int*)malloc(2*sizeof(int));
-			muest[i][0] = punto1[0]+i*sgn;
-			res = m*muest[i][0]+n;
-			muest[i][1] = roundf(res);
-		}
-		
-		tam2 = 0;
-		//miramos ahora de darle unos margencillos bien
-		//para ello, comprobamos en qué momentos se cambia de y
-		for(i=1; i<tam; i++){
-			if(muest[i][1] != muest[i-1][1]){
-				tam2++;
-			}
-		}
-		
-		//Calculamos los márgenes, just in case
-		marge = (int**)malloc(tam2*sizeof(int*));
-		aux = 0;
-		for(i=1; i<tam2; i++){
-			if(muest[i][1] != muest[i-1][1]){
-				marge[aux] = (int*)malloc(2*sizeof(int));
-				marge[aux][0] = muest[i][0];
-				marge[aux][1] = muest[i-1][1];
-				aux++;
-				marge[aux] = (int*)malloc(2*sizeof(int));
-				marge[aux][0] = muest[i-1][0];
-				marge[aux][1] = muest[i][1];
-				aux++;
-			}
-		}
-		
-		//Una vez tenemos marge y muest, le decimos al programa quién manda
-		*len=tam;
-		*len2 = 2*tam2;
-	} else {
-		//hay más variación en y
-		m = 1/m;
-		n = -n*m;
-		tam = abs(deltay)+1;
-		muest = (int**)malloc((tam+1)*sizeof(int*));
-		printf("a pasito, alojando %d arrays\n",tam);
-		if(deltay > 0){
-			sgn = 1;
-		} else {
-			sgn = -1;
-		}
-		
-		//Mirar por qué puntos pasa la recta.
-		for(i=0;i<tam;i++){
-			
-			muest[i] = (int*)malloc(2*sizeof(int));
-			
-			muest[i][1] = punto1[1]+i*sgn;
-			res = m*muest[i][1]+n;
-			muest[i][0] = roundf(res);
-		}
-		
-		tam2 = 0;
-		//miramos ahora de darle unos margencillos bien
-		//para ello, comprobamos en qué momentos se cambia de y
-		for(i=1; i<tam; i++){
-			if(muest[i][0] != muest[i-1][0]){
-				tam2++;
-			}
-		}
-		printf("%d\n",tam);
-		//Calculamos los márgenes, just in case
-		sgn = 2*tam2*sizeof(int*);
-		marge = malloc(sgn);
-		printf("Deberían caberme %d pollas\n",sgn);
-		aux = 0;
-		for(i=1; i<tam; i++){
-			
-			if(muest[i][0] != muest[i-1][0]){
-				printf("NEWS FLASH: Estamos en i=%d\n",i);
-				marge[aux] = (int*)malloc(2*sizeof(int));
-				
-				marge[aux][0] = muest[i][0];
-				marge[aux][1] = muest[i-1][1];
-				sgn = sgn - sizeof(marge[aux]);
-				printf("Ahora mismo caben %d pollas más\n",sgn);
-				aux++;
-				
-				
-				marge[aux] = (int*)malloc(2*sizeof(int));
-				marge[aux][0] = muest[i-1][0];
-				marge[aux][1] = muest[i][1];
-				sgn = sgn - sizeof(marge[aux]);
-				printf("Ahora mismo caben %d pollas más\n",sgn);
-				aux++;
-			}
-			
-		}
-		
-		//Una vez tenemos marge y muest, le decimos al programa quién manda
-		*len=tam;
-		*len2 = 2*tam2;
-	}
-}
-
-/*** Recorre un vector en busca de obstáculos en map.
- * 0 es que no hay obstáculos
- * 1 es que sí ***/
- int checkVector(int** v, int len){
-	 int i=0, equis, ygriega, esta, res=0;
-	 for(i=0; i<len; i++){
-		 //¿En qué coordenadas hay que mirar? muest nos lo dice
-		 equis = v[i][0];
-		 ygriega = v[i][1];
-		 esta = map[equis][ygriega];
-		 
-		 if((esta==1)||(esta==2)){
-			 res = 1;
-		 }
-		 i++;
-	 }
-	 
-	 return res;
- }
-
-/*** Comprueba si hay obstáculos entre los puntos 1 y 2
- * 0 es que no hay obstáculos
- * 1 es que sí ***/
- int check4Obstacles(int punto1[2], int punto2[2]){
-	 int len, len2;
-	 int res = 0, i;
-	 int equis, ygriega, esta;
-	 int r[2], aux1[2], aux2[2];
-	 float theta, m, n;
-	 
-	 whichPoints(punto1,punto2,&len,&len2);
-	 //comprobamos el array muest pa ver si hay obstáculos
-	 res = checkVector(muest,len);
-	 
-	 //comprobamos el array marge pa ver si hay obstáculos
-	 if(!res){
-		 res = checkVector(marge,len2);
-	 }
-	 
-	 if(!res){
-		theta = atan2(punto2[1]-punto1[1],punto2[0]-punto1[0]);
-		r[0]=roundf(MARGEN*sin(theta));
-		r[1]=-roundf(MARGEN*cos(theta));
-		
-		for(i=0; i<2; i++){
-			aux1[i] = punto1[i]+r[i];
-			aux2[i] = punto2[i]+r[i];
-		}
-		
-		whichPoints(aux1,aux2,&len,&len2);
-		res = checkVector(muest,len);
-		
-		if(!res){
-			for(i=0; i<2; i++){
-				aux1[i] = punto1[i]-r[i];
-				aux2[i] = punto2[i]-r[i];
-			}
-		
-			whichPoints(aux1,aux2,&len,&len2);
-			res = checkVector(muest,len);
-		}
-	 }
-	 
-	 return res;
- }
  
 //Pinta las celdas de map especificadas por vec[len]
 void paint(char which, int len, char mode){
@@ -323,108 +250,6 @@ void paint(char which, int len, char mode){
     }
 }
 
-float away(int p1[2], int p2[2]){
-    int deltax = p2[0]-p1[0];
-    int deltay = p2[1]-p2[1];
-    return sqrt(deltax*deltax+deltay*deltay);
-}
-
-//Inserta un valor val en la posición pos de un vector v[len]
-void inserta(int* v, int* len, int val, int pos){
-    int lon = *len;
-    int* aux = (int*)malloc(lon*sizeof(int));
-    int n;
-    
-    //Copiar el array original
-    for(n=0; n<lon; n++){
-        aux[n]=v[n];
-    }
-    //Aumentar el tamaño
-    *len = *len + 1;
-    lon = *len;
-    //Re-copiar el array original con el nuevo valor
-    free(v);
-    v = (int*)malloc(lon*sizeof(int));
-    for(n=0; n<*len; n++){
-        if(n<pos){
-            v[n]=aux[n];
-        } else if(n==pos){
-            v[n] = val;
-        } else {
-            v[n]=aux[n-1];
-        }
-    }
-}
-
-void planning(int punto1[2], int punto2[2], int* xroute, int* yroute, int* len){
-    int aux = check4Obstacles(punto1,punto2);
-    int p1[2],p2[2]; //punto auxiliar
-    int n=0;
-    int aux1[2], aux2[2];
-    if(!aux){ //si no hay obstáculos, damos luz verde a la trayectoria
-        xroute = (int*)malloc(2*sizeof(int));
-        yroute = (int*)malloc(2*sizeof(int));
-        xroute[0] = punto1[0];
-        yroute[0] = punto1[1];
-        xroute[1] = punto2[0];
-        yroute[1] = punto2[1];
-        *len = 2;
-    } else { //en caso contrario, sería cuestión de darle al tema.
-        //Seguiremos haciendo esto hasta el día en que muramos.
-        while(aux){
-            //Sacamos los puntos cruzados.
-            p1[0] = punto1[0];
-            p1[1] = punto2[1];
-            p2[0] = punto2[0];
-            p2[1] = punto1[1];
-            if(!check4Obstacles(p1,punto2)){
-                planning(punto1,p1,xroute,yroute,len);
-            } else if(!check4Obstacles(p2,punto2)){
-                    planning(punto1,p2,xroute,yroute,len);
-            } else {
-                if(away(punto1,p1)>away(punto2,p1)){
-                    aux1[0]=punto1[0];
-                    aux1[1]=punto1[1];
-                    aux2[0]=p1[0];
-                    aux2[1]=p1[1];
-                    while(check4Obstacles(aux1,aux2)){
-                        if(n<=0){
-                            n = -(n-1);
-                        } else {
-                            n = -(n+1);
-                        }
-                        
-                        aux1[0]+=n;
-                        aux2[0]+=n;
-                    }
-                    
-                    planning(punto1,aux2,xroute,yroute,len);
-                } else {
-                    aux1[0]=punto2[0];
-                    aux1[1]=punto2[1];
-                    aux2[0]=p1[0];
-                    aux2[1]=p1[1];
-                    while(check4Obstacles(aux1,aux2)){
-                        if(n<=0){
-                            n = -(n-1);
-                        } else {
-                            n = -(n+1);
-                        }
-                        
-                        aux1[1]+=n;
-                        aux2[1]+=n;
-                    }
-                    
-                    planning(punto1,aux2,xroute,yroute,len);
-                }
-            }
-        }
-        
-    inserta(xroute,len,punto2[0],*len);
-    inserta(yroute,len,punto2[1],*len);
-    }
-    
-}
 
  int main(){
      int tam1,tam2,n;
