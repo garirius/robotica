@@ -1,17 +1,20 @@
 #include <math.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include "plan.h"
 
 #define MARGEN 1.0 //1 celda - 10 cm
 
 //definimos el struct nodo de grafo
 typedef enum estado = {NOVISITADO=0, VISITADO, NUM_MODOS};
 struct Nodo {
-    estado state=NOVISITADO; //estado del nodo: visitado o novisitado
+    estado state; //estado del nodo: visitado o novisitado
     int pos[2]; //posición del mapa a la que corresponde el nodo
-    int num_vecinos=0; //número de vecinos que tiene el nodo
+    int num_vecinos; //número de vecinos que tiene el nodo
     int* id_vecinos; //array con los ID (aka posiciones en el array) de los nodos vecinos
     float* dist_vecinos; //array con las distancias a las que están los vecinos
+    int previo; //nos dice el id del nodo previo en la trayectoria óptima
+    float disfrom; //nos dice la distancia a la fuente
 }
 
 int** map;
@@ -132,6 +135,7 @@ void initGraph(int tam1, int tam2){
                 graph[id].pos[0]=n;
                 graph[id].pos[0]=m;
                 //Y contamos cuántos vecinos posibles tiene la celda
+                graph[id].num_vecinos=0;
                 for(tot=-1; tot<=1; tot++){
                     for(tot2=-1; tot2<=1; tot2++){
                         if(isValid(n+tot,m+tot2,tam1,tam2)){
@@ -222,7 +226,116 @@ void showMap(int tam1, int tam2){
 		printf("\n");
 	}
 }
- 
+
+//Muestra información sobre un nodo en particular
+void showNodo(Nodo what){
+    int n,pos;
+    pos = inGraph(what.pos[0],what.pos[1]);
+    printf("\nNodo (%d,%d) tiene %d vecinos\n",what.pos[0],what.pos[1],what.num_vecinos);
+    for(n=0; n<what.num_vecinos; n++){
+        printf("El (%d,%d), que está a una distancia %.1f\n",graph[what.id_vecinos[n]].pos[0], graph[what.id_vecinos[n]].pos[1], what.dist_vecinos[n]);
+    }
+    printf("\n");
+}
+
+//Nos dice cuál es el siguiente nodo por visitar más cercano al punto de partida
+int nextNode(){
+    int n, k;
+    float dismin = INFINITY;
+    for(k=0; k<grtam; k++){ //recorremos el grafo en busca del siguiente nodo
+        if(graph[k].state = NOVISITADO){ //sólo consideramos los que están por visitar
+            if(graph[k].disfrom < dismin){
+                n = k;
+            }
+        }
+    }
+    
+    return n;
+}
+
+//Sigue una trayectoria de nodos
+void followGraph(int* v, int len){
+    int** path = malloc(len*sizeof(int*));
+    int k;
+    
+    for(k=0; k<len; k++){
+        path[k] = malloc(2*sizeof(int));
+        path[k][0] = v[k].pos[0];
+        path[k][1] = v[k].pos[1];
+    }
+    
+    follow(int** path, int len);
+}
+//Ejecuta el algoritmo de Dijkstra para obtener una trayectoria óptima
+//from y to son los puntos de salida y llegada
+//v[len] es el array en el que se guardan los ID de los nodos que forman la trayectoria óptima
+void dijkstra(int from[2], int to[2], int* v, int* len){
+    int n, remaining, k;
+    int id1, id2; //IDs de los nodos a los que corresponden los puntos del mapa
+    float aux;
+    Nodo ele;
+    id1 = inGraph(from[0],from[1]);
+    id2 = inGraph(to[0],to[1]);
+    
+    if((id1>-1)&&(id2>-1)){ //si ambas posiciones existen en el grafo, avanti
+        //Partimos inicializando el conjunto Q de nodos por visitar
+        for(n=0; n<grtam; n++){
+            graph[n].disfrom = INFINITY;
+            graph[n].previo = -1;
+            graph[n].state = NOVISITADO;
+        }
+
+        graph[id1].disfrom = 0;
+        n = id1; //partimos, cómo no, del punto de partida
+        remaining = grtam;
+        
+        while((remaining>0)&&(n!=id2)){ //mientras queden nodos por visitar y no hayamos llegado...
+            graph[n].state = VISITADO;
+            ele = graph[n];
+            for(k=0; k<ele.num_vecinos; k++){ 
+                // recorremos los vecinos del n-ésimo nodo
+                /* evidentemente, la distancia del origen al k-ésimo vecino
+                   del n-ésimo nodo será la distancia del origen a éste más
+                   la distancia del n-ésimo nodo a su vecino */
+                aux = ele.disfrom + ele.dist_vecinos[k];
+                if(aux < graph[ele.id_vecinos[k]].disfrom){ 
+                    //si hemos encontrado una ruta más corta hasta v,
+                    //actuamos en consecuencia
+                    graph[ele.id_vecinos[k]].disfrom = aux;
+                    graph[ele.id_vecinos[k]].previo = n;
+                }
+            }
+            n = nextNode();
+            remaining--; //¡un nodo menos!
+        }
+        
+        //Una vez contamos con una cadena de nodos previos, funcionamos al revés
+        //partimos del final y vamos contando hacia atrás para ver lo largo que será v
+        *len = 1;
+        n = id2;
+        while((n!=id1)&&(n>-1)){ //mientras no hayamos llegado al destino...
+            n = graph[n].previo;
+            *len++;
+        }
+        
+        if(n>-1){ //si hemos podido hallar una forma de llegar a id2...
+            v = (int*)malloc((*len)*sizeof(int)); //reservamos memoria
+            n = id2;
+            k = *len -1;
+            while((n!=id1)&&(k >= 0)){ //volvemos a recorrer el vector del revés
+                v[k] = n; //guardamos el id del nodo en la última posición disponible
+                n = graph[n].previo;
+                k--;
+            }
+        } else {
+            printf("¡No se puede realizar la trayectoria!");
+        }
+    } else {
+        printf("¡No se puede realizar la trayectoria!");
+    }
+    
+}
+
 //Pinta las celdas de map especificadas por vec[len]
 void paint(char which, int len, char mode){
     int n,x,y;
