@@ -4,22 +4,24 @@
 #include "plan.h"
 
 #define MARGEN 1.0 //1 celda - 10 cm
-
+#define MAX_ELEMENTS 10000
 //definimos el struct nodo de grafo
-typedef enum estado = {NOVISITADO=0, VISITADO, NUM_MODOS};
-struct Nodo {
-    estado state; //estado del nodo: visitado o novisitado
+typedef enum status {NOVISITADO=0, VISITADO, NUM_MODOS} Estado;
+
+typedef struct nodus {
+    Estado state; //estado del nodo: visitado o novisitado
     int pos[2]; //posición del mapa a la que corresponde el nodo
     int num_vecinos; //número de vecinos que tiene el nodo
-    int* id_vecinos; //array con los ID (aka posiciones en el array) de los nodos vecinos
-    float* dist_vecinos; //array con las distancias a las que están los vecinos
+    int id_vecinos[8]; //array con los ID (aka posiciones en el array) de los nodos vecinos
+    float dist_vecinos[8]; //array con las distancias a las que están los vecinos
     int previo; //nos dice el id del nodo previo en la trayectoria óptima
     float disfrom; //nos dice la distancia a la fuente
-}
+} Nodo;
 
 int** map;
-Nodo* graph;
+Nodo graph[MAX_ELEMENTS];
 int grtam;
+int ruta[MAX_ELEMENTS];
 
 //Determina el tamaño del mapa.
 void getSize(char* name, int* tam1, int* tam2){
@@ -65,27 +67,30 @@ void getSize(char* name, int* tam1, int* tam2){
    * c) no ser contigua a un 1 ni un 2 (por temas de maniobrabilidad, básicamente)
    ***/
 int isValid(int x, int y, int tam1, int tam2){
-    int ele = map[x][y];
-    int cond1,cond2;
-    int res = 0; 
+    int ele;
+    int cond;
+    int res = 1; 
     //recorremos el vecindario de (x,y) para ver si se cumplen las condiciones b y c
     int n,m;
-    
-    for(n=-1; n<=1; n++){
-        for(m=-1; m<=1; m++){
-            //primero comprobamos que los índices no se salen del mapa
-            if(((x+n>tam1)&&(x+n<0))&&((y+m>tam2)&&(y+m<0))){
-                ele = map[x+n][y+m];
-                //Y entonces comprobamos que se cumplen las condiciones
-                cond1 = (ele >= 0) && (ele <= 9); //condición a
-                cond2 = (ele != 1) && (ele != 2); //condición b
-                if(cond1 && cond2){
-                    res = 1;
+    if((x<0||y<0)||(x>=tam2)||(y>=tam1)){
+        res = 0;
+    } else {
+        for(n=-1; n<=1; n++){
+            for(m=-1; m<=1; m++){
+                //primero comprobamos que los índices no se salen del mapa
+
+                if(((x+n<tam2)&&(x+n>=0))&&((y+m<tam1)&&(y+m>=0))){
+                    ele = map[x+n][y+m];
+                    //Y entonces comprobamos que se cumplen las condiciones
+                    cond = (ele != 1) && (ele != 2); //condición b
+                    if(!cond){
+                        res = 0;
+                    }
+
                 }
             }
         }
     }
-    
     return res;
 }
 
@@ -114,38 +119,40 @@ float distGraph(int pos1, int pos2){
 //Inicializa el grafo con el mapa que tenemos.
 void initGraph(int tam1, int tam2){
     int n,m, id, tot, tot2, aux, cnt;
+    tot = 0;
     id = 0;
     //contaremos sólo como nodos válidos aquellos que NO tengan ni sean contiguos a un 1 ó un 2
-    for(n=0; n<tam1;n++){
-        for(m=0; m<tam2; m++){
+    for(n=0; n<tam2;n++){
+        for(m=0; m<tam1; m++){
             if(isValid(n,m,tam1,tam2)){
                 tot++;
+                printf("_");
+            } else {
+                printf("X");
             }
         }
+        printf("\n");
     }
-    
     //Reservamos la memoria que haga falta
-    graph = (Nodo*)malloc(tot*sizeof(Nodo));
     grtam = tot;
-    
     //Recorremos nuevamente el mapa, esta vez inicializando ya nodos.
-    for(n=0; n<tam1;n++){
-        for(m=0; m<tam2; m++){
+    for(n=0; n<tam2;n++){
+        for(m=0; m<tam1; m++){
             if(isValid(n,m,tam1,tam2)){
-                graph[id].pos[0]=n;
                 graph[id].pos[0]=m;
+                graph[id].pos[1]=n;
+                
                 //Y contamos cuántos vecinos posibles tiene la celda
                 graph[id].num_vecinos=0;
+                
                 for(tot=-1; tot<=1; tot++){
                     for(tot2=-1; tot2<=1; tot2++){
-                        if(isValid(n+tot,m+tot2,tam1,tam2)){
-                            graph[id].num_vecinos++;
-                        }
+                       aux = isValid(n+tot,m+tot2,tam1,tam2);
+                       if(aux&&(tot!=0 || tot2!=0)){
+                           graph[id].num_vecinos++;                        
+                       }
                     }
-                }
-                //Tras saberlo, reservamos la memoria necesaria.
-                graph[id].id_vecinos = (int*)malloc(num_vecinos*sizeof(int));
-                graph[id].dist_vecinos = (float*)malloc(num_vecinos*sizeof(int));
+                } 
                 id++;
             }
         }
@@ -159,10 +166,13 @@ void initGraph(int tam1, int tam2){
         for(tot=-1; tot<=1; tot++){
             for(tot2=-1; tot2<=1; tot2++){
                 aux = inGraph(n+tot,m+tot2);
-                if(aux >= 0){ //si la celda contigua corresponde a un nodo del grafo, lo apuntamos.
+                if((aux >= 0)&&(tot!=0 || tot2!=0)){ //si la celda contigua corresponde a un nodo del grafo, lo apuntamos.
                     graph[id].id_vecinos[cnt]=aux;
                     graph[id].dist_vecinos[cnt]=distGraph(aux,id);
                     cnt++;
+                    if(cnt >= graph[id].num_vecinos){
+                        break;
+                    }
                 }
             }
         }
@@ -176,12 +186,14 @@ void leeMap(char* name, int tam1, int tam2){
     char aux;
     int over;
     fp = fopen(name,"r");
-    
+    printf("%dx%d\n",tam1,tam2);
+    free(map);
     map = (int**)malloc((tam2+1)*sizeof(int*));
     //Como para nosotros el origen del mapa está abajo de todo, hay que leer el mapa del revés.
+    
     for(n=tam2-1; n>=0; n=n-1){
 		map[n] = (int*)malloc(tam1*sizeof(int));
-		for(m=0; m<tam1+2; m++){
+		for(m=0; m<tam1+1; m++){
 			fscanf(fp, "%c", &aux);
 			if((aux >= '0')&&(aux <= '9')){
 				map[n][m]= aux - '0';
@@ -190,30 +202,7 @@ void leeMap(char* name, int tam1, int tam2){
 	}
     fclose(fp);
     
-    for(n=tam2-1; n>=0; n=n-1){
-		for(m=0; m<tam1; m++){
-			printf("%d",map[n][m]);
-		}
-		printf("\n");
-	}
     printf("Mapa leído!\n");
-}
-
-//Escribe un archivo con el mapa
-void escribeMap(char* name, int tam1, int tam2){
-    FILE * fp = fopen(name,"w");
-    int n,m;
-    printf("estoi escrebiendo\n");
-    for(n=tam2-1; n>=0; n=n-1){
-		for(m=0; m<tam1; m++){
-			fprintf(fp,"%d",map[n][m]);
-		}
-		fprintf(fp,"\n");
-	}
-    fclose(fp);
-    printf("pa que me interrompes atontao que no repetas\n");
-    printf("wtf ebil floutin poin bit level jaquin\n");
-    printf("jejeje es broma de la enformateca\n");
 }
 
 void showMap(int tam1, int tam2){
@@ -228,9 +217,9 @@ void showMap(int tam1, int tam2){
 }
 
 //Muestra información sobre un nodo en particular
-void showNodo(Nodo what){
-    int n,pos;
-    pos = inGraph(what.pos[0],what.pos[1]);
+void showNodo(int whe){
+    int n;
+    Nodo what = graph[whe];
     printf("\nNodo (%d,%d) tiene %d vecinos\n",what.pos[0],what.pos[1],what.num_vecinos);
     for(n=0; n<what.num_vecinos; n++){
         printf("El (%d,%d), que está a una distancia %.1f\n",graph[what.id_vecinos[n]].pos[0], graph[what.id_vecinos[n]].pos[1], what.dist_vecinos[n]);
@@ -243,9 +232,10 @@ int nextNode(){
     int n, k;
     float dismin = INFINITY;
     for(k=0; k<grtam; k++){ //recorremos el grafo en busca del siguiente nodo
-        if(graph[k].state = NOVISITADO){ //sólo consideramos los que están por visitar
+        if(graph[k].state == NOVISITADO){ //sólo consideramos los que están por visitar
             if(graph[k].disfrom < dismin){
                 n = k;
+                dismin = graph[k].disfrom;
             }
         }
     }
@@ -260,31 +250,30 @@ void followGraph(int* v, int len){
     
     for(k=0; k<len; k++){
         path[k] = malloc(2*sizeof(int));
-        path[k][0] = v[k].pos[0];
-        path[k][1] = v[k].pos[1];
+        path[k][0] = graph[v[k]].pos[0];
+        path[k][1] = graph[v[k]].pos[1];
     }
     
-    follow(int** path, int len);
+    //follow(path,len);
 }
 //Ejecuta el algoritmo de Dijkstra para obtener una trayectoria óptima
 //from y to son los puntos de salida y llegada
 //v[len] es el array en el que se guardan los ID de los nodos que forman la trayectoria óptima
-void dijkstra(int from[2], int to[2], int* v, int* len){
-    int n, remaining, k;
+int dijkstra(int from[2], int to[2]){
+    int n, remaining, k, len=-1;
     int id1, id2; //IDs de los nodos a los que corresponden los puntos del mapa
     float aux;
     Nodo ele;
     id1 = inGraph(from[0],from[1]);
     id2 = inGraph(to[0],to[1]);
-    
     if((id1>-1)&&(id2>-1)){ //si ambas posiciones existen en el grafo, avanti
         //Partimos inicializando el conjunto Q de nodos por visitar
         for(n=0; n<grtam; n++){
             graph[n].disfrom = INFINITY;
             graph[n].previo = -1;
             graph[n].state = NOVISITADO;
+            
         }
-
         graph[id1].disfrom = 0;
         n = id1; //partimos, cómo no, del punto de partida
         remaining = grtam;
@@ -311,54 +300,48 @@ void dijkstra(int from[2], int to[2], int* v, int* len){
         
         //Una vez contamos con una cadena de nodos previos, funcionamos al revés
         //partimos del final y vamos contando hacia atrás para ver lo largo que será v
-        *len = 1;
+        len = 1;
         n = id2;
         while((n!=id1)&&(n>-1)){ //mientras no hayamos llegado al destino...
             n = graph[n].previo;
-            *len++;
+            len++;
         }
-        
         if(n>-1){ //si hemos podido hallar una forma de llegar a id2...
-            v = (int*)malloc((*len)*sizeof(int)); //reservamos memoria
             n = id2;
-            k = *len -1;
+            k = len -1;
             while((n!=id1)&&(k >= 0)){ //volvemos a recorrer el vector del revés
-                v[k] = n; //guardamos el id del nodo en la última posición disponible
+                ruta[k] = n; //guardamos el id del nodo en la última posición disponible
                 n = graph[n].previo;
                 k--;
+                
+    
             }
+            ruta[0] = id1;
         } else {
-            printf("¡No se puede realizar la trayectoria!");
+            printf("¡No se puede realizar la trayectoria!\n");
         }
     } else {
-        printf("¡No se puede realizar la trayectoria!");
+        printf("¡El punto que me dices tiene un obstáculo!\n");
     }
-    
+    return len;
 }
 
 //Pinta las celdas de map especificadas por vec[len]
-void paint(char which, int len, char mode){
-    int n,x,y;
-    int** vec;
-    switch(which){
-		case '0':
-			vec = muest;
-			break;
-		case '1':
-			vec = marge;
-			break;
-	}
+void paint(int* v, int len, char mode, int tam1, int tam2){
+    int n,x,y,id;
     for(n=0; n<len; n++){
-        x = vec[n][0];
-        y = vec[n][1];
-        
-        switch(mode){
-            case '0': //
-                map[x][y]=3;
-                break;
-            case '1':
-                map[x][y] += 3;
-                break;
+        id = v[n];
+        x = graph[id].pos[0];
+        y = graph[id].pos[1];
+        if((x>=0)&&(y>=0)&&(x<tam1)&&(y<tam2)){
+            switch(mode){
+                case '0': //
+                    map[y][x]=3;
+                    break;
+                case '1':
+                    map[y][x] += 3;
+                    break;
+            }
         }
     }
 }
@@ -366,9 +349,9 @@ void paint(char which, int len, char mode){
 
  int main(){
      int tam1,tam2,n;
-     int po[2]={2,2};
-     int pf[2]={8,8};
-     int len, len2;
+     int po[2]={0,0};
+     int pf[2]={37,6};
+     int len;
      getSize("mapa.txt",&tam1,&tam2);
      map = (int**)malloc((tam2+1)*sizeof(int*));
      for(n=tam2-1; n>=0; n=n-1){
@@ -376,13 +359,14 @@ void paint(char which, int len, char mode){
 	 }
      leeMap("mapa.txt",tam1,tam2);
      //Una vez leído el mapa, vamos a ver qué tal funciona el tema de detectar obstáculos
+     //showMap(tam1,tam2);
+     
+     //Inicializamos el grafo
+     printf("Inicializando grafo...\n");
+     initGraph(tam1,tam2);
+     printf("Grafo inicializado.\nCalculando ruta...\n");
+     len = dijkstra(po,pf);
+     paint(ruta,len,'0',tam1,tam2);
      showMap(tam1,tam2);
-     whichPoints(po,pf,&len,&len2);
-     printf("Terminé de medir mis mierdas");
-     paint('0',len,'0');
-     paint('1',len2,'0');
-     printf("\n");
-     showMap(tam1,tam2);
-     escribeMap("testmapetix.txt",tam1,tam2);
      return 0;
  }
