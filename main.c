@@ -6,11 +6,14 @@
 #include <stdlib.h>
 #include "sense.h"
 #include "plan.h"
+#include "mapas.h"
 
 #define INIVAL 0 // Valor inicial del PWM
 #define RANGO 100 // Rango del PWM
 extern float dista[2];
 int mypos[2], ori;
+int** map;
+extern int ruta[MAX_ELEMENTS];
 
 int main(){
     char who; //0 sensor izq triggered y 1 sensor dcho triggered
@@ -57,7 +60,7 @@ int main(){
     delay(100);
     advance(50);*/
     
-    int i,len,orit;
+    /* int i,len,orit;
     int** path;
     
     printf("Dime la coordenada x y ori inicial:\n");
@@ -74,7 +77,36 @@ int main(){
         scanf("%d %d",&path[i][0],&path[i][1]);
     }
     
-    follow(path,len);
+    follow(path,len);*/
+    
+    int tam1,tam2,n;
+     int po[2]={0,0};
+     int pf[2]={37,6};
+     int len;
+     int id1, id2;
+     getSize("mapa.txt",&tam1,&tam2);
+     map = (int**)malloc((tam2+1)*sizeof(int*));
+     for(n=tam2-1; n>=0; n=n-1){
+		map[n] = (int*)malloc(tam1*sizeof(int));
+	 }
+     leeMap("mapa.txt",tam1,tam2);
+     //Una vez leído el mapa, vamos a ver qué tal funciona el tema de detectar obstáculos
+     //showMap(tam1,tam2);
+     
+     //Inicializamos el grafo
+     printf("Inicializando grafo...\n");
+     initGraph(tam1,tam2);
+     printf("Grafo inicializado.\nDame dos puntikos así wapos:\n");
+     scanf("%d %d",&po[0],&po[1]);
+     scanf("%d %d",&pf[0],&pf[1]);
+     len = dijkstra(po,pf);
+     len = refine(len,tam1,tam2);
+     
+     
+     paint(ruta,len,'0',tam1,tam2);
+     showMap(tam1,tam2);
+     len = removefromruta(0,len);
+     followGraph(len);
     
     
     //advance(100);

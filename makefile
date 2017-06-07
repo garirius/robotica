@@ -1,3 +1,3 @@
-leviosa: main.c sense.c move.c plan.c 
-	gcc -o testplan main.c sense.c move.c plan.c -lwiringPi -lm
-	chmod +x testplan
+leviosa: main.c sense.c move.c plan.c mapas.c
+	gcc -o mapetix main.c sense.c move.c plan.c mapas.c -lwiringPi -lm
+	chmod +x mapetix

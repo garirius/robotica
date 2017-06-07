@@ -3,7 +3,6 @@
 #include <stdio.h>
 #include "plan.h"
 
-#define MARGEN 1.0 //1 celda - 10 cm
 #define MAX_ELEMENTS 10000
 //definimos el struct nodo de grafo
 typedef enum status {NOVISITADO=0, VISITADO, NUM_MODOS} Estado;
@@ -18,7 +17,7 @@ typedef struct nodus {
     float disfrom; //nos dice la distancia a la fuente
 } Nodo;
 
-int** map;
+extern int** map;
 Nodo graph[MAX_ELEMENTS];
 int grtam;
 int ruta[MAX_ELEMENTS];
@@ -244,17 +243,17 @@ int nextNode(){
 }
 
 //Sigue una trayectoria de nodos
-void followGraph(int* v, int len){
+void followGraph(int len){
     int** path = malloc(len*sizeof(int*));
     int k;
     
     for(k=0; k<len; k++){
         path[k] = malloc(2*sizeof(int));
-        path[k][0] = graph[v[k]].pos[0];
-        path[k][1] = graph[v[k]].pos[1];
+        path[k][0] = 10*graph[ruta[k]].pos[0];
+        path[k][1] = 10*graph[ruta[k]].pos[1];
     }
     
-    //follow(path,len);
+    follow(path,len);
 }
 //Ejecuta el algoritmo de Dijkstra para obtener una trayectoria óptima
 //from y to son los puntos de salida y llegada
@@ -489,10 +488,11 @@ int refine(int len, int tam1, int tam2){
 		}
 	}
 	
+	
 	return len;
 }
 
- int main(){
+ /*int main(){
      int tam1,tam2,n;
      int po[2]={0,0};
      int pf[2]={37,6};
@@ -519,4 +519,4 @@ int refine(int len, int tam1, int tam2){
      showMap(tam1,tam2);
      
      return 0;
- }
+ }*/
