@@ -22,6 +22,7 @@ int** map;
 Nodo graph[MAX_ELEMENTS];
 int grtam;
 int ruta[MAX_ELEMENTS];
+int muest[MAX_ELEMENTS][2];
 
 //Determina el tamaño del mapa.
 void getSize(char* name, int* tam1, int* tam2){
@@ -103,7 +104,6 @@ int inGraph(int x, int y){
             return n;
         }
     }
-    
     return -1;
 }
 
@@ -326,6 +326,122 @@ int dijkstra(int from[2], int to[2]){
     return len;
 }
 
+/*** Recorre un vector en busca de obstáculos en map.
+ * 0 es que no hay obstáculos
+ * 1 es que sí ***/
+ int checkVector(int v[][2], int len, int tam1, int tam2){
+	 int i=0, equis, ygriega, esta, res=0;
+	 int cond1, cond2;
+	 for(i=0; i<len; i++){
+		 //¿En qué coordenadas hay que mirar? muest nos lo dice
+		 equis = v[i][0];
+		 ygriega = v[i][1];
+		 cond1 = (equis < 0) || (ygriega < 0);
+		 cond2 = (equis >= tam1) || (ygriega >=tam2);
+		 cond1 = cond1 || cond2;
+		 if(!cond1){
+			 esta = map[ygriega][equis];
+			 if((esta==1)||(esta==2)){
+				 return 1;
+			 }
+		 }
+	 }
+	 
+	 return 0;
+ }
+ 
+ /*** Saca qué puntos tiene que comprobar entre los puntos 1 y 2 
+ * punto1 y punto2 son las entradas de la función
+ * muest y marge son los arrays de puntos que hay que mirar
+ * muest[len] son los puntos por los que pasa la recta ***/
+void whichPoints(int punto1[2], int punto2[2], int* len, int size1, int size2){
+	int deltax = punto2[0]-punto1[0];
+	int deltay = punto2[1]-punto1[1];
+	float m, n;
+	float res;
+	int tam,i,sgn,aux,tam2,k;
+	int s1, s2;
+	k = 0; 
+	
+	//miramos si muestrear en x ó en y
+	if(abs(deltax) > abs(deltay)){
+		//hay más variación en x
+		m = deltay/(deltax+0.0);
+		n = punto1[1]-m*punto1[0];
+		tam = abs(deltax)+1;
+		if(deltax > 0){
+			sgn = 1;
+		} else {
+			sgn = -1;
+		}
+	} else {
+		//hay más variación en y
+		m = deltax/(deltay+0.0);
+		n = punto1[0]-m*punto1[1];
+		tam = abs(deltay)+1;
+		
+		if(deltay > 0){
+			sgn = 1;
+		} else {
+			sgn = -1;
+		}
+	}
+	
+	//Mirar por qué puntos pasa la recta.
+		for(i=0;i<tam;i++){
+			muest[i][0] = punto1[0]+i*sgn;
+			res = m*muest[i][0]+n;
+			muest[i][1] = roundf(res);
+		}
+		
+		tam2 = tam;
+		k = tam-1;
+		for(i=0; i<tam; i++){
+			//para cada celda en la recta que comprobamos
+			for(s1=-2; s1<=2; s1++){
+				for(s2=-2; s2<=2; s2++){
+					//añadimos los vecinos a la lista de cosas a comprobar
+					aux = (s1==0 && s2==0)||(muest[i][0]+s1);
+					deltax = (muest[i][0]+s1>=size1)||(muest[i][0]+s1<0);
+					deltay = (muest[i][1]+s2>=size2)||(muest[i][1]+s2<0);
+					//si se sale del mapa no lo tenemos en cuenta
+					aux = aux || deltax || deltay;
+					if(!aux){
+						muest[k][0] = muest[i][0]+s1;
+						muest[k][1] = muest[i][1]+s2;
+						k++;
+						tam2++;
+					}
+				}
+			}
+		}
+		
+		//Una vez tenemos marge y muest, le decimos al programa quién manda
+		*len=tam2;
+}
+ 
+/*** Comprueba si hay obstáculos entre los puntos 1 y 2
+ * 0 es que no hay obstáculos
+ * 1 es que sí ***/
+ int check4Obstacles(int id1, int id2, int size1, int size2){
+	 int len, len2;
+	 int res = 0, i;
+	 int equis, ygriega, esta;
+	 int r[2], aux1[2], aux2[2];
+	 float theta, m, n;
+	 int punto1[2], punto2[2];
+	 
+	 punto1[0]=graph[id1].pos[0];
+	 punto1[1]=graph[id1].pos[1];
+	 punto2[0]=graph[id2].pos[0];
+	 punto2[1]=graph[id2].pos[1];
+	 whichPoints(punto1,punto2,&len,size1,size2);
+	 //comprobamos el array muest pa ver si hay obstáculos
+	 res = checkVector(muest,len, size1,size2);
+	 return res;
+ }
+ 
+
 //Pinta las celdas de map especificadas por vec[len]
 void paint(int* v, int len, char mode, int tam1, int tam2){
     int n,x,y,id;
@@ -346,12 +462,42 @@ void paint(int* v, int len, char mode, int tam1, int tam2){
     }
 }
 
+//Elimina el pos-ésimo elemento del array ruta
+int removefromruta(int wh, int len){
+	int n;
+	
+	for(n=wh; n<len-1; n++){
+		ruta[n] = ruta[n+1];
+	}
+	
+	return len-1;
+}
+
+int refine(int len, int tam1, int tam2){
+	int i=0, is, j;
+	
+	//Vamos a recorrer el array ruta
+	while(i < len-2){
+		j = i+2;
+		is = check4Obstacles(ruta[i],ruta[j],tam1,tam2);
+		if(!is){
+			//si no hay obstáculos entre el i-ésimo y el j-ésimo nodo,
+			//eliminamos el j-1-ésimo nodo, que es redundante
+			len = removefromruta(j-1,len);
+		} else {
+			i++;
+		}
+	}
+	
+	return len;
+}
 
  int main(){
      int tam1,tam2,n;
      int po[2]={0,0};
      int pf[2]={37,6};
      int len;
+     int id1, id2;
      getSize("mapa.txt",&tam1,&tam2);
      map = (int**)malloc((tam2+1)*sizeof(int*));
      for(n=tam2-1; n>=0; n=n-1){
@@ -364,9 +510,13 @@ void paint(int* v, int len, char mode, int tam1, int tam2){
      //Inicializamos el grafo
      printf("Inicializando grafo...\n");
      initGraph(tam1,tam2);
-     printf("Grafo inicializado.\nCalculando ruta...\n");
+     printf("Grafo inicializado.\nDame dos puntikos así wapos:\n");
+     scanf("%d %d",&po[0],&po[1]);
+     scanf("%d %d",&pf[0],&pf[1]);
      len = dijkstra(po,pf);
+     len = refine(len,tam1,tam2);
      paint(ruta,len,'0',tam1,tam2);
      showMap(tam1,tam2);
+     
      return 0;
  }
