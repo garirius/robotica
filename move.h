@@ -35,3 +35,4 @@ void advance(int cm);
 void gira(int angle);
 void esquiva();
 void motoresSetup();
+void esquivarSetup();

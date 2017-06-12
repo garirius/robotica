@@ -35,6 +35,9 @@
 //Definimos pi porque por algún motivo math.h no lo tiene
 #define PI 3.141592
 
+//Para la esquiva. Si detectamos un obstáculo antes del tiempo establecido, es el mismo.
+#define TIEMPO_ESPERA 5000
+
 //Variables globales para los hilos
 int fri=0, frd=0; //franjas recorridas
 char sti, std; //franja actual (0 = negro, 1 = blanco)
@@ -45,8 +48,10 @@ int girando=0, esquivando=0;
 // esquivando nos dice (sopresa sorpresa) si estamos esquivando un obstáculo
 int di=0, dd=0, d=0, angulo=0;
 int dt, nt; //distancia target, ángulo target y cuentas target
+unsigned int detected = 0; //momento en el que se ha detectado el obstáculo
 extern int mypos[2], ori; //actuales posición y orientación
 extern float dista[2]; //distancias detectadas por los sensores
+int done = 0;
 
 void startCounting(){
     sensen = 1;
@@ -206,13 +211,12 @@ PI_THREAD(stable){
                         dd = PERI*frd/FRANJAS;
                         d = (di+dd)/2;
                         
-                        if((dista[0]>-1)||(dista[1]>-1)){
-                            //si detecta algún obstáculo, nos metemos en harina
+                        if(((dista[0]>-1)||(dista[1]>-1))&&(detected - millis() < TIEMPO_ESPERA)){
+                            //si detecta algún obstáculo que no haya detectado ya, nos metemos en harina
                             if((esquivando==1) && ((dista[0]>20)||(dista[1]>20))){
                                 obstaculo = 0;
                             } else {
-                                //obstaculo = 1;
-                                //printf("\n\n      ¡TENEMOS UN GANADOR!\n\n");
+                                //obstaculo = 1; (esta línea sería la que activaría todo el tema esquivar)
                             }
                         } else {
                             obstaculo = 0;
@@ -260,17 +264,25 @@ PI_THREAD(stable){
 
 //hilo para esquivar
 PI_THREAD(dodge){
-	while(1){
-		if(esquivando){
-			printf("Esquivando...\n");
-			esquiva();
-		}
-	}
+    while(1){
+        if(esquivando && (detected - millis() < TIEMPO_ESPERA)){
+            detected = millis();
+            printf("¡Obstáculo encontrado!\n\n");
+            done = 1;
+            addObstacle(mypos,ori);
+            //una vez añadido el obstáculo, es cuestión de reinicializar el grafo y toda la pesca
+            //pero de eso ya se encargarán las siguientes iteraciones del main
+            break;
+        }
+    }
 }
 
 void motoresSetup(){
     sti = leeSens(0);
     std = leeSens(1);
     int x = piThreadCreate(stable);
-    //int y = piThreadCreate(dodge);
+}
+
+void esquivarSetup(){
+    int y = piThreadCreate(dodge); //(este hilo es el encargado de recalcular la ruta una vez )
 }

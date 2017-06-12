@@ -1,9 +1,13 @@
 #include <math.h>
 #include <stdlib.h>
 #include <stdio.h>
-#include "plan.h"
+#include "sense.h"
+#include "move.h"
 
 #define MAX_ELEMENTS 10000
+#define CELL_SIZE 10.0
+#define OBST_LENGTH 40
+#define OBST_WIDTH 40
 //definimos el struct nodo de grafo
 typedef enum status {NOVISITADO=0, VISITADO, NUM_MODOS} Estado;
 
@@ -18,13 +22,25 @@ typedef struct nodus {
 } Nodo;
 
 extern int** map;
+extern tamano1, tamano2;
 Nodo graph[MAX_ELEMENTS];
 int grtam;
 int ruta[MAX_ELEMENTS];
 int muest[MAX_ELEMENTS][2];
 
+//Determina si X punto cae dentro del mapa.
+int inMap(int x, int y){
+    int cond1 = (x<0)||(x>=tamano1);
+    int cond2 = (y<0)||(y>=tamano2);
+    
+    if(cond1||cond2){
+        return 0;
+    } else {
+        return 1;
+    }
+}
 //Determina el tamaño del mapa.
-void getSize(char* name, int* tam1, int* tam2){
+void getSize(char* name){
 	FILE * fp = fopen(name,"r");
     int n,m;
     int s1 =0;
@@ -54,8 +70,8 @@ void getSize(char* name, int* tam1, int* tam2){
         }
         over = feof(fp);
     }
-    *tam1 = s1-1;
-    *tam2 = s2+1;
+    tamano1 = s1-1;
+    tamano2 = s2+1;
     fclose(fp);
 }
 
@@ -66,21 +82,21 @@ void getSize(char* name, int* tam1, int* tam2){
    * b) no contener un 1 ni un 2 (léase: obstáculos)
    * c) no ser contigua a un 1 ni un 2 (por temas de maniobrabilidad, básicamente)
    ***/
-int isValid(int x, int y, int tam1, int tam2){
+int isValid(int x, int y){
     int ele;
     int cond;
     int res = 1; 
     //recorremos el vecindario de (x,y) para ver si se cumplen las condiciones b y c
     int n,m;
-    if((x<0||y<0)||(x>=tam2)||(y>=tam1)){
+    if(inMap(x,y)){
         res = 0;
     } else {
         for(n=-1; n<=1; n++){
             for(m=-1; m<=1; m++){
                 //primero comprobamos que los índices no se salen del mapa
 
-                if(((x+n<tam2)&&(x+n>=0))&&((y+m<tam1)&&(y+m>=0))){
-                    ele = map[x+n][y+m];
+                if(inMap(x+n,y+n)){
+                    ele = map[y+m][x+n];
                     //Y entonces comprobamos que se cumplen las condiciones
                     cond = (ele != 1) && (ele != 2); //condición b
                     if(!cond){
@@ -116,14 +132,14 @@ float distGraph(int pos1, int pos2){
     return sqrt((x1-x2)*(x1-x2)+(y1-y2)*(y1-y2));
 }
 //Inicializa el grafo con el mapa que tenemos.
-void initGraph(int tam1, int tam2){
+void initGraph(){
     int n,m, id, tot, tot2, aux, cnt;
     tot = 0;
     id = 0;
     //contaremos sólo como nodos válidos aquellos que NO tengan ni sean contiguos a un 1 ó un 2
-    for(n=0; n<tam2;n++){
-        for(m=0; m<tam1; m++){
-            if(isValid(n,m,tam1,tam2)){
+    for(n=0; n<tamano2;n++){
+        for(m=0; m<tamano1; m++){
+            if(isValid(n,m)){
                 tot++;
                 printf("_");
             } else {
@@ -135,9 +151,9 @@ void initGraph(int tam1, int tam2){
     //Reservamos la memoria que haga falta
     grtam = tot;
     //Recorremos nuevamente el mapa, esta vez inicializando ya nodos.
-    for(n=0; n<tam2;n++){
-        for(m=0; m<tam1; m++){
-            if(isValid(n,m,tam1,tam2)){
+    for(n=0; n<tamano2;n++){
+        for(m=0; m<tamano1; m++){
+            if(isValid(n,m)){
                 graph[id].pos[0]=m;
                 graph[id].pos[1]=n;
                 
@@ -146,7 +162,7 @@ void initGraph(int tam1, int tam2){
                 
                 for(tot=-1; tot<=1; tot++){
                     for(tot2=-1; tot2<=1; tot2++){
-                       aux = isValid(n+tot,m+tot2,tam1,tam2);
+                       aux = isValid(n+tot,m+tot2);
                        if(aux&&(tot!=0 || tot2!=0)){
                            graph[id].num_vecinos++;                        
                        }
@@ -179,20 +195,20 @@ void initGraph(int tam1, int tam2){
 }
 
 //Lee un archivo y saca un mapa, así como su tamaño
-void leeMap(char* name, int tam1, int tam2){
+void leeMap(char* name){
     FILE * fp;
     int n,m;
     char aux;
     int over;
     fp = fopen(name,"r");
-    printf("%dx%d\n",tam1,tam2);
+    printf("%dx%d\n",tamano1,tamano2);
     free(map);
-    map = (int**)malloc((tam2+1)*sizeof(int*));
+    map = (int**)malloc((tamano2+1)*sizeof(int*));
     //Como para nosotros el origen del mapa está abajo de todo, hay que leer el mapa del revés.
     
-    for(n=tam2-1; n>=0; n=n-1){
-		map[n] = (int*)malloc(tam1*sizeof(int));
-		for(m=0; m<tam1+1; m++){
+    for(n=tamano2-1; n>=0; n=n-1){
+		map[n] = (int*)malloc(tamano1*sizeof(int));
+		for(m=0; m<tamano1+1; m++){
 			fscanf(fp, "%c", &aux);
 			if((aux >= '0')&&(aux <= '9')){
 				map[n][m]= aux - '0';
@@ -204,11 +220,11 @@ void leeMap(char* name, int tam1, int tam2){
     printf("Mapa leído!\n");
 }
 
-void showMap(int tam1, int tam2){
+void showMap(){
     int n,m;
     
-    for(n=tam2-1; n>=0; n=n-1){
-		for(m=0; m<tam1; m++){
+    for(n=tamano2-1; n>=0; n=n-1){
+		for(m=0; m<tamano1; m++){
 			printf("%d",map[n][m]);
 		}
 		printf("\n");
@@ -255,6 +271,7 @@ void followGraph(int len){
     
     follow(path,len);
 }
+
 //Ejecuta el algoritmo de Dijkstra para obtener una trayectoria óptima
 //from y to son los puntos de salida y llegada
 //v[len] es el array en el que se guardan los ID de los nodos que forman la trayectoria óptima
@@ -328,17 +345,13 @@ int dijkstra(int from[2], int to[2]){
 /*** Recorre un vector en busca de obstáculos en map.
  * 0 es que no hay obstáculos
  * 1 es que sí ***/
- int checkVector(int v[][2], int len, int tam1, int tam2){
+ int checkVector(int v[][2], int len){
 	 int i=0, equis, ygriega, esta, res=0;
-	 int cond1, cond2;
 	 for(i=0; i<len; i++){
 		 //¿En qué coordenadas hay que mirar? muest nos lo dice
 		 equis = v[i][0];
 		 ygriega = v[i][1];
-		 cond1 = (equis < 0) || (ygriega < 0);
-		 cond2 = (equis >= tam1) || (ygriega >=tam2);
-		 cond1 = cond1 || cond2;
-		 if(!cond1){
+		 if(inMap(equis,ygriega)){
 			 esta = map[ygriega][equis];
 			 if((esta==1)||(esta==2)){
 				 return 1;
@@ -353,7 +366,7 @@ int dijkstra(int from[2], int to[2]){
  * punto1 y punto2 son las entradas de la función
  * muest y marge son los arrays de puntos que hay que mirar
  * muest[len] son los puntos por los que pasa la recta ***/
-void whichPoints(int punto1[2], int punto2[2], int* len, int size1, int size2){
+void whichPoints(int punto1[2], int punto2[2], int* len){
 	int deltax = punto2[0]-punto1[0];
 	int deltay = punto2[1]-punto1[1];
 	float m, n;
@@ -400,11 +413,9 @@ void whichPoints(int punto1[2], int punto2[2], int* len, int size1, int size2){
 			for(s1=-2; s1<=2; s1++){
 				for(s2=-2; s2<=2; s2++){
 					//añadimos los vecinos a la lista de cosas a comprobar
-					aux = (s1==0 && s2==0)||(muest[i][0]+s1);
-					deltax = (muest[i][0]+s1>=size1)||(muest[i][0]+s1<0);
-					deltay = (muest[i][1]+s2>=size2)||(muest[i][1]+s2<0);
+					aux = s1==0 && s2==0;
 					//si se sale del mapa no lo tenemos en cuenta
-					aux = aux || deltax || deltay;
+					aux = aux || !inMap(muest[i][0]+s1,muest[i][1]+s2);
 					if(!aux){
 						muest[k][0] = muest[i][0]+s1;
 						muest[k][1] = muest[i][1]+s2;
@@ -422,7 +433,7 @@ void whichPoints(int punto1[2], int punto2[2], int* len, int size1, int size2){
 /*** Comprueba si hay obstáculos entre los puntos 1 y 2
  * 0 es que no hay obstáculos
  * 1 es que sí ***/
- int check4Obstacles(int id1, int id2, int size1, int size2){
+ int check4Obstacles(int id1, int id2){
 	 int len, len2;
 	 int res = 0, i;
 	 int equis, ygriega, esta;
@@ -434,21 +445,21 @@ void whichPoints(int punto1[2], int punto2[2], int* len, int size1, int size2){
 	 punto1[1]=graph[id1].pos[1];
 	 punto2[0]=graph[id2].pos[0];
 	 punto2[1]=graph[id2].pos[1];
-	 whichPoints(punto1,punto2,&len,size1,size2);
+	 whichPoints(punto1,punto2,&len);
 	 //comprobamos el array muest pa ver si hay obstáculos
-	 res = checkVector(muest,len, size1,size2);
+	 res = checkVector(muest,len);
 	 return res;
  }
  
 
 //Pinta las celdas de map especificadas por vec[len]
-void paint(int* v, int len, char mode, int tam1, int tam2){
+void paint(int* v, int len, char mode){
     int n,x,y,id;
     for(n=0; n<len; n++){
         id = v[n];
         x = graph[id].pos[0];
         y = graph[id].pos[1];
-        if((x>=0)&&(y>=0)&&(x<tam1)&&(y<tam2)){
+        if(inMap(x,y)){
             switch(mode){
                 case '0': //
                     map[y][x]=3;
@@ -472,13 +483,13 @@ int removefromruta(int wh, int len){
 	return len-1;
 }
 
-int refine(int len, int tam1, int tam2){
+int refine(int len){
 	int i=0, is, j;
 	
 	//Vamos a recorrer el array ruta
 	while(i < len-2){
 		j = i+2;
-		is = check4Obstacles(ruta[i],ruta[j],tam1,tam2);
+		is = check4Obstacles(ruta[i],ruta[j]);
 		if(!is){
 			//si no hay obstáculos entre el i-ésimo y el j-ésimo nodo,
 			//eliminamos el j-1-ésimo nodo, que es redundante
@@ -492,31 +503,107 @@ int refine(int len, int tam1, int tam2){
 	return len;
 }
 
- /*int main(){
-     int tam1,tam2,n;
-     int po[2]={0,0};
-     int pf[2]={37,6};
-     int len;
-     int id1, id2;
-     getSize("mapa.txt",&tam1,&tam2);
-     map = (int**)malloc((tam2+1)*sizeof(int*));
-     for(n=tam2-1; n>=0; n=n-1){
-		map[n] = (int*)malloc(tam1*sizeof(int));
-	 }
-     leeMap("mapa.txt",tam1,tam2);
-     //Una vez leído el mapa, vamos a ver qué tal funciona el tema de detectar obstáculos
-     //showMap(tam1,tam2);
-     
-     //Inicializamos el grafo
-     printf("Inicializando grafo...\n");
-     initGraph(tam1,tam2);
-     printf("Grafo inicializado.\nDame dos puntikos así wapos:\n");
-     scanf("%d %d",&po[0],&po[1]);
-     scanf("%d %d",&pf[0],&pf[1]);
-     len = dijkstra(po,pf);
-     len = refine(len,tam1,tam2);
-     paint(ruta,len,'0',tam1,tam2);
-     showMap(tam1,tam2);
-     
-     return 0;
- }*/
+//Llena de lo que queramos todas las celdas que pasen por la recta entre from y to.
+void fillLine(int from[2], int to[2], int what){
+    int deltax = to[0]-from[0];
+	int deltay = to[1]-from[1];
+	float m, n;
+	float res;
+	int tam,i,sgn;
+	int s1, s2;
+	int k = 0; 
+	
+	//miramos si muestrear en x ó en y
+	if(abs(deltax) > abs(deltay)){
+		//hay más variación en x
+		m = deltay/(deltax+0.0);
+		n = from[1]-m*from[0];
+		tam = abs(deltax)+1;
+		if(deltax > 0){
+			sgn = 1;
+		} else {
+			sgn = -1;
+		}
+	} else {
+		//hay más variación en y
+		m = deltax/(deltay+0.0);
+		n = from[0]-m*from[1];
+		tam = abs(deltay)+1;
+		
+		if(deltay > 0){
+			sgn = 1;
+		} else {
+			sgn = -1;
+		}
+	}
+	
+	//Mirar por qué puntos pasa la recta y pintar eso
+		for(i=0;i<tam;i++){
+			s1 = from[0]+i*sgn;
+			res = m*muest[i][0]+n;
+			s2 = roundf(res);
+            if(inMap(s1,s2)){
+                map[s2][s1]=what;
+            }
+		}
+}
+
+void addObstacle(int from[2], int lookin){
+    int corners[4][2];
+    float x = from[0]/CELL_SIZE;
+    float y = from[1]/CELL_SIZE;
+    float ang = lookin*PI/180;
+    int i, j;
+    //empezamos buscando las esquinas
+    x = x + LONGING*cos(ang) + OBST_LENGTH*cos(ang+PI/2)/2;
+    y = y + LONGING*sin(ang) + OBST_LENGTH*sin(ang+PI/2)/2;
+    
+    for(i=0; i<4; i++){
+        switch(i){
+            case 0:
+                break;
+            case 1:
+                x += OBST_WIDTH*cos(ang);
+                y += OBST_WIDTH*sin(ang);
+                break;
+            case 2:
+                x -= OBST_LENGTH*cos(ang+PI/2);
+                y -= OBST_LENGTH*sin(ang+PI/2);
+                break;
+            case 3:
+                x -= OBST_WIDTH*cos(ang);
+                y -= OBST_WIDTH*sin(ang);
+                break;
+        }
+        
+        corners[i][0] = roundf(x);
+        corners[i][1] = roundf(y);
+    }
+    
+    //Seguidamente, llenamos los lados y diagonales de '1'
+    for(i=0; i<4; i++){
+        for(j=0; j<4; j++){
+            if(i!=j){
+                fillLine(corners[i],corners[j],1);
+            }
+        }
+    }
+    
+    //Para rematar, ponemos que las esquinas sean '2'
+    for(i=0; i<4; i++){
+        map[corners[i][1]][corners[i][0]] = 2;
+    }
+}
+
+//quita los '3' del mapa
+//esos '3' los añadimos para mostrar la ruta que seguirá el robot
+void resetMap(){
+    int n,m;
+    for(n=0; n<tamano2; n++){
+        for(m=0; m<tamano1; m++){
+            if(map[n][m]==3){
+                map[n][m] = 0;
+            }
+        }
+    }
+}

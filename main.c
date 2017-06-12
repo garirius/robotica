@@ -11,8 +11,10 @@
 #define INIVAL 0 // Valor inicial del PWM
 #define RANGO 100 // Rango del PWM
 extern float dista[2];
+extern int done;
 int mypos[2], ori;
 int** map;
+int tamano1, tamano2;
 extern int ruta[MAX_ELEMENTS];
 
 int main(){
@@ -78,38 +80,45 @@ int main(){
     }
     
     follow(path,len);*/
-    
-    int tam1,tam2,n;
-     int po[2]={0,0};
-     int pf[2]={37,6};
-     int len;
-     int id1, id2;
-     getSize("mapa.txt",&tam1,&tam2);
-     map = (int**)malloc((tam2+1)*sizeof(int*));
-     for(n=tam2-1; n>=0; n=n-1){
-		map[n] = (int*)malloc(tam1*sizeof(int));
-	 }
-     leeMap("mapa.txt",tam1,tam2);
-     //Una vez leído el mapa, vamos a ver qué tal funciona el tema de detectar obstáculos
-     //showMap(tam1,tam2);
-     
-     //Inicializamos el grafo
-     printf("Inicializando grafo...\n");
-     initGraph(tam1,tam2);
-     printf("Grafo inicializado.\nDame dos puntikos así wapos:\n");
-     scanf("%d %d",&po[0],&po[1]);
-     scanf("%d %d",&pf[0],&pf[1]);
-     len = dijkstra(po,pf);
-     len = refine(len,tam1,tam2);
-     
-     
-     paint(ruta,len,'0',tam1,tam2);
-     showMap(tam1,tam2);
-     len = removefromruta(0,len);
-     followGraph(len);
-    
-    
-    //advance(100);
-    //delay(1000);
+
+    int n;
+    int po[2]={0,0};
+    int pf[2]={37,6};
+    int len;
+    int id1, id2;
+    int y;
+    getSize("mapa.txt");
+    map = (int**)malloc((tamano2+1)*sizeof(int*));
+    for(n=tamano2-1; n>=0; n=n-1){
+        map[n] = (int*)malloc(tamano1*sizeof(int));
+    }
+    leeMap("mapa.txt");
+
+    printf("Mapa leído.\nMirando en la dirección x\nDime, ¿de dónde salgo?\n");
+    scanf("%d %d",&po[0],&po[1]);
+    printf("¿Y hacia dónde voy?\n");
+    scanf("%d %d",&pf[0],&pf[1]);
+    while(1){
+        //Inicializamos el grafo
+        printf("Muy bien. Inicializando grafo...\n");
+        initGraph();
+        printf("Muy bien. Calculando ruta...\n");
+        
+        len = dijkstra(po,pf);
+        len = refine(len);
+
+        paint(ruta,len,'0');
+        showMap(tam1,tam2);
+        len = removefromruta(0,len);
+        // int y = esquivarSetup(); <-- esto pondría en marcha el monitor de obstáculos
+        followGraph(len);
+
+        if(!done){ //done se pone a 1 si hemos interrumpido la ruta por un obstáculo
+            break;
+        }
+        resetMap(); //quitamos los '3' que pintamos para ver la ruta
+        po[0] = mypos[0]/10;
+        po[1] = mypos[1]/10;
+    }
     return 0;
 }

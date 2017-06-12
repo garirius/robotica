@@ -5,6 +5,7 @@
 #define UMBRAL 620
 #define FRANJAS 24
 #define LUT_SIZE 17
+#define LONGING 20
 
 static unsigned char dist[LUT_SIZE] = {3, 4, 5, 6, 7, 8, 9, 10, 12, 14, 16, 18, 20, 25, 30, 35, 40};
 static float volt[LUT_SIZE] = {3.0348, 2.7261, 2.3478, 2.0347, 1.7826, 1.5869, 1.4, 1.2956, 1.0913, 0.9608, 0.8478, 0.7739, 0.6565, 0.5217, 0.4304, 0.3739, 0.313};

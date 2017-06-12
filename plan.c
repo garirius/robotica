@@ -7,6 +7,7 @@
 #define TORCIDO 10
 //Nuestras variables globales de posición y orientación
 extern int mypos[2], ori, esquivando;
+extern int done;
 
 //Comprueba si hemos llegado a nuestro destino.
 int thereYetAng(int* post,int orit){
@@ -117,7 +118,7 @@ void follow(int** path, int len){
     for(i=0; i<len; i++){
         corigo = 0;
         
-        while(!corigo){
+        while(!corigo && !done){
             if(!esquivando){
                 ira(path[i]);
                 corigo = thereYet(path[i]);
